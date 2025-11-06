@@ -21,18 +21,18 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
         <div className="flex gap-2 sm:gap-3 flex-shrink-0">
           <button
             onClick={onOpenFilterModal}
-            className="flex items-center justify-center gap-1.5 sm:gap-2 bg-gray-600 text-white px-2.5 sm:px-4 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors text-sm sm:text-base whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 sm:gap-2 bg-gray-600 text-white px-2.5 sm:px-3.5 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors text-xs sm:text-sm whitespace-nowrap"
             aria-label="Filters"
           >
-            <Filter size={18} />
+            <Filter size={16} />
             <span className="hidden sm:inline">Filters</span>
           </button>
           <button
             onClick={onOpenAddModal}
-            className="flex items-center justify-center gap-1.5 sm:gap-2 bg-blue-600 text-white px-2.5 sm:px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors text-sm sm:text-base whitespace-nowrap"
+            className="flex items-center justify-center gap-1.25 sm:gap-1.5 bg-blue-600 text-white px-2.5 sm:px-3 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors text-xs sm:text-sm whitespace-nowrap"
             aria-label="Add Expense"
           >
-            <Plus size={18} />
+            <Plus size={16} />
             <span className="hidden sm:inline">Add Expense</span>
           </button>
         </div>
