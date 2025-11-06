@@ -1,41 +1,38 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { validateSessionFromCookie } from '@/lib/auth';
+
+const SESSION_COOKIE_NAME = 'auth-session';
 
 export function middleware(request: NextRequest) {
-  // Get credentials from environment variables
-  const basicAuthUser = process.env.BASIC_AUTH_USER;
-  const basicAuthPassword = process.env.BASIC_AUTH_PASSWORD;
+  const { pathname } = request.nextUrl;
 
-  // If credentials are not set, allow access (for development without auth)
-  if (!basicAuthUser || !basicAuthPassword) {
+  // Allow access to login page and API auth routes without authentication
+  if (pathname === '/login' || pathname.startsWith('/api/auth/')) {
     return NextResponse.next();
   }
 
-  // Get Authorization header
-  const authorizationHeader = request.headers.get('authorization');
+  // Get session cookie
+  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
+  const cookieValue = sessionCookie?.value;
 
-  // Check if Authorization header exists and is valid
-  if (authorizationHeader) {
-    const authValue = authorizationHeader.split(' ')[1];
-    if (authValue) {
-      // Decode base64 in Edge runtime compatible way
-      const decoded = atob(authValue);
-      const [user, password] = decoded.split(':');
-
-      // Validate credentials
-      if (user === basicAuthUser && password === basicAuthPassword) {
-        return NextResponse.next();
-      }
-    }
+  // Check if cookie exists and has a valid value (not empty string)
+  if (!cookieValue || cookieValue.trim() === '') {
+    // No valid session cookie, redirect to login
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('from', pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // Return 401 Unauthorized with WWW-Authenticate header
-  return new NextResponse('Authentication required', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': 'Basic realm="Secure Area"',
-    },
-  });
+  // Validate session token
+  if (validateSessionFromCookie(cookieValue)) {
+    return NextResponse.next();
+  }
+
+  // Invalid or expired session, redirect to login
+  const loginUrl = new URL('/login', request.url);
+  loginUrl.searchParams.set('from', pathname);
+  return NextResponse.redirect(loginUrl);
 }
 
 // Configure which routes to protect
@@ -43,7 +40,7 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
+     * - api (API routes - but we'll handle /api/auth/ in middleware)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)

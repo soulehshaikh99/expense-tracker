@@ -11,6 +11,7 @@ A modern expense tracking web application built with Next.js, TypeScript, and Fi
 - ✅ Track payments received from others
 - ✅ Responsive design for desktop and mobile
 - ✅ Monthly summary with breakdowns
+- ✅ Secure login and logout system
 
 ## Setup
 
@@ -33,7 +34,7 @@ npm install
    ```
    - You can find these values in Firebase Console → Project Settings → Your apps → Web app config
 
-### 3. Set up Basic Authentication:
+### 3. Set up Authentication:
    - Add authentication credentials to your `.env.local` file:
    ```
    BASIC_AUTH_USER=your_username
@@ -48,7 +49,9 @@ npm run dev
 ```
 
 ### 5. Open [http://localhost:3000](http://localhost:3000) in your browser.
-   - You will be prompted to enter your username and password (if BASIC_AUTH_USER and BASIC_AUTH_PASSWORD are set)
+   - You will be redirected to the login page if authentication is enabled
+   - Enter your username and password to access the expense tracker
+   - Use the "Logout" button in the top-right corner to log out when needed
 
 ## Adding Sample Data
 
@@ -93,17 +96,29 @@ Each expense contains:
 - Delete expenses (with confirmation)
 - Mark payment received for expenses made for others
 
+## Authentication
+
+The app includes a secure login and logout system:
+
+- **Login Page**: Users are redirected to `/login` if not authenticated
+- **Session Management**: Uses secure HTTP-only cookies for session management
+- **Session Duration**: Sessions last for 7 days
+- **Logout**: Users can log out using the "Logout" button in the top-right corner
+- **Automatic Redirect**: Unauthenticated users are automatically redirected to the login page
+
+**Note**: If `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` environment variables are not set, the app will be accessible without authentication (useful for development).
+
 ## Deployment to Vercel
 
 1. Push your code to GitHub
 2. Import your project in Vercel
 3. Add all the Firebase environment variables in Vercel's project settings (Environment Variables)
-4. Add the Basic Authentication environment variables:
+4. Add the Authentication environment variables:
    - `BASIC_AUTH_USER` - Your desired username
    - `BASIC_AUTH_PASSWORD` - Your desired password
 5. Deploy!
 
 The app is fully configured for Vercel deployment with the `vercel.json` file included.
 
-**Security Note**: The app uses HTTP Basic Authentication to protect all routes. Make sure to set strong passwords for production use.
+**Security Note**: The app uses session-based authentication with secure HTTP-only cookies. Make sure to set strong passwords for production use. Sessions expire after 7 days of inactivity.
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { collection, addDoc, updateDoc, deleteDoc, doc, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Expense, PaymentMode } from '@/types/expense';
@@ -12,6 +13,7 @@ import MonthlySummary from '@/components/MonthlySummary';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
 export default function Home() {
+  const router = useRouter();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -20,6 +22,7 @@ export default function Home() {
   const [selectedPaymentMode, setSelectedPaymentMode] = useState<PaymentMode | 'All'>('All');
   const [selectedForWhom, setSelectedForWhom] = useState<string>('All');
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     fetchExpenses();
@@ -216,12 +219,48 @@ export default function Home() {
     return Array.from(new Set(values)).sort();
   };
 
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    
+    setIsLoggingOut(true);
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include', // Ensure cookies are included
+      });
+
+      if (response.ok) {
+        // Force a hard redirect to ensure cookie is cleared
+        window.location.href = '/login';
+      } else {
+        console.error('Logout failed');
+        setIsLoggingOut(false);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8 px-2 sm:px-4 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-4 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">Expense Tracker</h1>
-          <p className="text-sm sm:text-base text-gray-600">Manage your monthly expenses</p>
+        <div className="mb-4 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
+            <div className="text-center sm:text-left flex-1">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">Expense Tracker</h1>
+              <p className="text-sm sm:text-base text-gray-600">Manage your monthly expenses</p>
+            </div>
+            <div className="flex justify-center sm:justify-end">
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {isLoggingOut ? 'Logging out...' : 'Logout'}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* <FirebaseStatus /> */}
