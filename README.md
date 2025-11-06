@@ -33,12 +33,22 @@ npm install
    ```
    - You can find these values in Firebase Console → Project Settings → Your apps → Web app config
 
-### 3. Run the development server:
+### 3. Set up Basic Authentication:
+   - Add authentication credentials to your `.env.local` file:
+   ```
+   BASIC_AUTH_USER=your_username
+   BASIC_AUTH_PASSWORD=your_password
+   ```
+   - **Note**: If these variables are not set, the app will be accessible without authentication (useful for development)
+   - For production deployment (Vercel), add these environment variables in your Vercel project settings
+
+### 4. Run the development server:
 ```bash
 npm run dev
 ```
 
-### 4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+### 5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+   - You will be prompted to enter your username and password (if BASIC_AUTH_USER and BASIC_AUTH_PASSWORD are set)
 
 ## Adding Sample Data
 
@@ -88,7 +98,12 @@ Each expense contains:
 1. Push your code to GitHub
 2. Import your project in Vercel
 3. Add all the Firebase environment variables in Vercel's project settings (Environment Variables)
-4. Deploy!
+4. Add the Basic Authentication environment variables:
+   - `BASIC_AUTH_USER` - Your desired username
+   - `BASIC_AUTH_PASSWORD` - Your desired password
+5. Deploy!
 
 The app is fully configured for Vercel deployment with the `vercel.json` file included.
+
+**Security Note**: The app uses HTTP Basic Authentication to protect all routes. Make sure to set strong passwords for production use.
 
