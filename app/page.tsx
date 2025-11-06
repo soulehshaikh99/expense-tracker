@@ -15,6 +15,8 @@ export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [selectedPaymentMode, setSelectedPaymentMode] = useState<PaymentMode | 'All'>('All');
   const [selectedForWhom, setSelectedForWhom] = useState<string>('All');
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -171,10 +173,29 @@ export default function Home() {
 
   const handleEditExpense = (expense: Expense) => {
     setEditingExpense(expense);
+    setIsModalOpen(true);
   };
 
   const handleCancelEdit = () => {
     setEditingExpense(null);
+  };
+
+  const handleOpenModal = () => {
+    setEditingExpense(null);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingExpense(null);
+  };
+
+  const handleOpenFilterModal = () => {
+    setIsFilterModalOpen(true);
+  };
+
+  const handleCloseFilterModal = () => {
+    setIsFilterModalOpen(false);
   };
 
   const handleMarkPaymentReceived = async (id: string, received: boolean) => {
@@ -196,38 +217,24 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8 px-2 sm:px-4 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Expense Tracker</h1>
-          <p className="text-gray-600">Manage your monthly expenses</p>
+        <div className="text-center mb-4 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">Expense Tracker</h1>
+          <p className="text-sm sm:text-base text-gray-600">Manage your monthly expenses</p>
         </div>
 
         {/* <FirebaseStatus /> */}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <ExpenseForm
-              onSubmit={editingExpense ? (data) => handleUpdateExpense(editingExpense.id, data) : handleAddExpense}
-              editingExpense={editingExpense}
-              onCancel={handleCancelEdit}
-            />
-
-            <ExpenseFilters
-              selectedPaymentMode={selectedPaymentMode}
-              selectedForWhom={selectedForWhom}
-              forWhomOptions={getUniqueForWhomValues()}
-              currentMonth={currentMonth}
-              onPaymentModeChange={setSelectedPaymentMode}
-              onForWhomChange={setSelectedForWhom}
-              onMonthChange={setCurrentMonth}
-            />
-
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             <ExpenseList
               expenses={filteredExpenses}
               onEdit={handleEditExpense}
               onDelete={handleDeleteExpense}
               onMarkPaymentReceived={handleMarkPaymentReceived}
+              onOpenFilterModal={handleOpenFilterModal}
+              onOpenAddModal={handleOpenModal}
             />
           </div>
 
@@ -239,6 +246,26 @@ export default function Home() {
             />
           </div>
         </div>
+
+        <ExpenseForm
+          onSubmit={editingExpense ? (data) => handleUpdateExpense(editingExpense.id, data) : handleAddExpense}
+          editingExpense={editingExpense}
+          onCancel={handleCancelEdit}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+
+        <ExpenseFilters
+          selectedPaymentMode={selectedPaymentMode}
+          selectedForWhom={selectedForWhom}
+          forWhomOptions={getUniqueForWhomValues()}
+          currentMonth={currentMonth}
+          onPaymentModeChange={setSelectedPaymentMode}
+          onForWhomChange={setSelectedForWhom}
+          onMonthChange={setCurrentMonth}
+          isOpen={isFilterModalOpen}
+          onClose={handleCloseFilterModal}
+        />
       </div>
     </div>
   );

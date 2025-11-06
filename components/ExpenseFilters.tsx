@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import { PaymentMode } from '@/types/expense';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { X } from 'lucide-react';
 
 interface ExpenseFiltersProps {
   selectedPaymentMode: PaymentMode | 'All';
@@ -11,6 +13,8 @@ interface ExpenseFiltersProps {
   onPaymentModeChange: (mode: PaymentMode | 'All') => void;
   onForWhomChange: (forWhom: string) => void;
   onMonthChange: (month: Date) => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 const paymentModes: PaymentMode[] = ['Credit Card', 'Debit Card', 'UPI', 'Cash'];
@@ -23,6 +27,8 @@ export default function ExpenseFilters({
   onPaymentModeChange,
   onForWhomChange,
   onMonthChange,
+  isOpen,
+  onClose,
 }: ExpenseFiltersProps) {
   const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const date = new Date(e.target.value);
@@ -41,9 +47,48 @@ export default function ExpenseFilters({
     onMonthChange(newDate);
   };
 
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Filters</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto m-2 sm:m-0">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-800 pr-2">Filters</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1 transition-colors flex-shrink-0"
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="p-4 sm:p-6">
       <div className="space-y-4">
         <div>
           <label htmlFor="month" className="block text-sm font-medium text-gray-700 mb-2">
@@ -108,6 +153,8 @@ export default function ExpenseFilters({
               </option>
             ))}
           </select>
+        </div>
+      </div>
         </div>
       </div>
     </div>

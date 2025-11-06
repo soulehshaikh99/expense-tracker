@@ -2,51 +2,81 @@
 
 import { Expense } from '@/types/expense';
 import { format } from 'date-fns';
+import { Pencil, Trash2, Plus, Filter } from 'lucide-react';
 
 interface ExpenseListProps {
   expenses: Expense[];
   onEdit: (expense: Expense) => void;
   onDelete: (id: string) => void;
   onMarkPaymentReceived: (id: string, received: boolean) => void;
+  onOpenFilterModal: () => void;
+  onOpenAddModal: () => void;
 }
 
-export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentReceived }: ExpenseListProps) {
+export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentReceived, onOpenFilterModal, onOpenAddModal }: ExpenseListProps) {
+  const headerContent = (
+    <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+      <div className="flex flex-row justify-between items-center gap-2 sm:gap-0">
+        <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 flex-shrink-0">Expenses</h2>
+        <div className="flex gap-2 sm:gap-3 flex-shrink-0">
+          <button
+            onClick={onOpenFilterModal}
+            className="flex items-center justify-center gap-1.5 sm:gap-2 bg-gray-600 text-white px-2.5 sm:px-4 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors text-sm sm:text-base whitespace-nowrap"
+            aria-label="Filters"
+          >
+            <Filter size={18} />
+            <span className="hidden sm:inline">Filters</span>
+          </button>
+          <button
+            onClick={onOpenAddModal}
+            className="flex items-center justify-center gap-1.5 sm:gap-2 bg-blue-600 text-white px-2.5 sm:px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors text-sm sm:text-base whitespace-nowrap"
+            aria-label="Add Expense"
+          >
+            <Plus size={18} />
+            <span className="hidden sm:inline">Add Expense</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (expenses.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 text-center text-gray-500">
-        <p>No expenses found for the selected filters.</p>
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        {headerContent}
+        <div className="p-4 sm:p-6 text-center text-gray-500 text-sm sm:text-base">
+          <p>No expenses found for the selected filters.</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="text-2xl font-semibold text-gray-800">Expenses</h2>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+      {headerContent}
+      <div className="overflow-x-auto w-full">
+        <table className="w-full divide-y divide-gray-200" style={{ minWidth: '640px' }}>
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Date
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Title
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Amount
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                 Payment Mode
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 For Whom
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                 Payment Status
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -54,26 +84,30 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
           <tbody className="bg-white divide-y divide-gray-200">
             {expenses.map((expense) => (
               <tr key={expense.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-900">
                   {format(expense.date, 'MMM dd, yyyy')}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-900">{expense.title}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 max-w-[120px] sm:max-w-none truncate sm:truncate-none">
+                  {expense.title}
+                </td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
                   ₹{expense.amount.toFixed(2)}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{expense.paymentMode}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 hidden md:table-cell">
+                  {expense.paymentMode}
+                </td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">
                   {expense.forWhom === 'Self' ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                       Self
                     </span>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       {expense.forWhom}
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm hidden lg:table-cell">
                   {expense.forWhom !== 'Self' ? (
                     <label className="flex items-center">
                       <input
@@ -90,13 +124,15 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
                     <span className="text-gray-400">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex justify-end gap-2">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-right text-xs sm:text-sm font-medium">
+                  <div className="flex justify-end gap-1 sm:gap-2">
                     <button
                       onClick={() => onEdit(expense)}
-                      className="text-blue-600 hover:text-blue-900 focus:outline-none"
+                      className="text-blue-600 hover:text-blue-900 focus:outline-none p-1 rounded hover:bg-blue-50 transition-colors"
+                      title="Edit"
+                      aria-label="Edit expense"
                     >
-                      Edit
+                      <Pencil size={16} />
                     </button>
                     <button
                       onClick={() => {
@@ -104,9 +140,11 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
                           onDelete(expense.id);
                         }
                       }}
-                      className="text-red-600 hover:text-red-900 focus:outline-none"
+                      className="text-red-600 hover:text-red-900 focus:outline-none p-1 rounded hover:bg-red-50 transition-colors"
+                      title="Delete"
+                      aria-label="Delete expense"
                     >
-                      Delete
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </td>
@@ -115,10 +153,10 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
           </tbody>
         </table>
       </div>
-      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+      <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50">
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">Total Expenses:</span>
-          <span className="text-lg font-semibold text-gray-900">
+          <span className="text-xs sm:text-sm text-gray-600">Total Expenses:</span>
+          <span className="text-base sm:text-lg font-semibold text-gray-900">
             ₹{expenses.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
           </span>
         </div>
