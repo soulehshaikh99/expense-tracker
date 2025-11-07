@@ -12,6 +12,7 @@ A modern expense tracking web application built with Next.js, TypeScript, and Fi
 - ✅ Responsive design for desktop and mobile
 - ✅ Monthly summary with breakdowns
 - ✅ Secure login and logout system
+- ✅ Progressive Web App (PWA) - Installable on mobile devices
 
 ## Setup
 
@@ -121,4 +122,31 @@ The app includes a secure login and logout system:
 The app is fully configured for Vercel deployment with the `vercel.json` file included.
 
 **Security Note**: The app uses session-based authentication with secure HTTP-only cookies. Make sure to set strong passwords for production use. Sessions expire after 7 days of inactivity.
+
+## Progressive Web App (PWA)
+
+The app is configured as a Progressive Web App and can be installed on mobile devices:
+
+### Installation
+
+**On Android:**
+1. Open the app in Chrome browser
+2. Tap the menu (three dots) in the top right
+3. Select "Add to Home screen" or "Install app"
+4. The app will appear on your home screen
+
+**On iOS:**
+1. Open the app in Safari browser
+2. Tap the Share button (square with arrow)
+3. Select "Add to Home Screen"
+4. The app will appear on your home screen
+
+### PWA Features
+
+- **Standalone Display**: When installed, the app runs in standalone mode without browser UI
+- **App Icons**: Custom icons for different device sizes
+- **Theme Colors**: Matches the app's design theme
+- **Mobile Optimized**: Optimized viewport settings for mobile devices
+
+**Note**: The app requires an internet connection to sync with Firebase. Offline functionality is not included.
 
