@@ -11,6 +11,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'Expense Tracker',
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
   icons: {
     icon: [
       { url: '/icons/favicon.ico' },

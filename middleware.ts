@@ -7,8 +7,13 @@ const SESSION_COOKIE_NAME = 'auth-session';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow access to login page and API auth routes without authentication
-  if (pathname === '/login' || pathname.startsWith('/api/auth/')) {
+  // Allow access to login page, API auth routes, and static PWA files without authentication
+  if (
+    pathname === '/login' ||
+    pathname.startsWith('/api/auth/') ||
+    pathname === '/manifest.json' ||
+    pathname.startsWith('/icons/')
+  ) {
     return NextResponse.next();
   }
 
@@ -44,8 +49,10 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - manifest.json (PWA manifest)
+     * - icons/ (PWA icons directory)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|manifest.json|icons/).*)',
   ],
 };
 
