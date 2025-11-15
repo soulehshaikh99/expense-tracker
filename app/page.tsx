@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import { collection, addDoc, updateDoc, deleteDoc, doc, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Expense, PaymentMode } from '@/types/expense';
+import { Budget } from '@/types/budget';
 import ExpenseForm from '@/components/ExpenseForm';
 import ExpenseList from '@/components/ExpenseList';
 import ExpenseFilters from '@/components/ExpenseFilters';
 import MonthlySummary from '@/components/MonthlySummary';
+import BudgetForm from '@/components/BudgetForm';
 // import FirebaseStatus from '@/components/FirebaseStatus';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
@@ -23,14 +25,20 @@ export default function Home() {
   const [selectedForWhom, setSelectedForWhom] = useState<string>('All');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [currentBudget, setCurrentBudget] = useState<Budget | null>(null);
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
 
   useEffect(() => {
     fetchExpenses();
+    fetchBudgets();
   }, []);
 
   useEffect(() => {
     applyFilters();
-  }, [expenses, selectedPaymentMode, selectedForWhom, currentMonth]);
+    updateCurrentBudget();
+  }, [expenses, selectedPaymentMode, selectedForWhom, currentMonth, budgets]);
 
   const fetchExpenses = async () => {
     try {
@@ -219,6 +227,91 @@ export default function Home() {
     return Array.from(new Set(values)).sort();
   };
 
+  const fetchBudgets = async () => {
+    try {
+      console.log('🔄 Attempting to fetch budgets from Firestore...');
+      const q = query(collection(db, 'budgets'), orderBy('month', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const budgetsData: Budget[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        budgetsData.push({
+          id: doc.id,
+          month: data.month.toDate(),
+          amount: data.amount,
+          createdAt: data.createdAt.toDate(),
+          updatedAt: data.updatedAt.toDate(),
+        });
+      });
+      setBudgets(budgetsData);
+      console.log(`✅ Successfully fetched ${budgetsData.length} budgets`);
+    } catch (error: any) {
+      console.error('❌ Error fetching budgets:', error);
+      // Don't show alert for budgets as it's optional
+    }
+  };
+
+  const updateCurrentBudget = () => {
+    const monthStart = startOfMonth(currentMonth);
+    const budget = budgets.find((b) => {
+      const budgetMonth = startOfMonth(b.month);
+      return budgetMonth.getTime() === monthStart.getTime();
+    });
+    setCurrentBudget(budget || null);
+  };
+
+  const handleSetBudget = async (budgetData: Omit<Budget, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const monthStart = startOfMonth(budgetData.month);
+      
+      // Check if budget already exists for this month
+      const existingBudget = budgets.find((b) => {
+        const budgetMonth = startOfMonth(b.month);
+        return budgetMonth.getTime() === monthStart.getTime();
+      });
+
+      const now = Timestamp.now();
+      const monthTimestamp = Timestamp.fromDate(monthStart);
+
+      if (existingBudget) {
+        // Update existing budget
+        const budgetRef = doc(db, 'budgets', existingBudget.id);
+        await updateDoc(budgetRef, {
+          amount: budgetData.amount,
+          updatedAt: now,
+        });
+        console.log('✅ Budget updated successfully');
+      } else {
+        // Create new budget
+        await addDoc(collection(db, 'budgets'), {
+          month: monthTimestamp,
+          amount: budgetData.amount,
+          createdAt: now,
+          updatedAt: now,
+        });
+        console.log('✅ Budget created successfully');
+      }
+      fetchBudgets();
+    } catch (error: any) {
+      console.error('❌ Error setting budget:', error);
+      alert('Failed to set budget. Please try again.');
+    }
+  };
+
+  const handleOpenBudgetModal = () => {
+    setEditingBudget(currentBudget);
+    setIsBudgetModalOpen(true);
+  };
+
+  const handleCloseBudgetModal = () => {
+    setIsBudgetModalOpen(false);
+    setEditingBudget(null);
+  };
+
+  const handleCancelBudgetEdit = () => {
+    setEditingBudget(null);
+  };
+
   const handleLogout = async () => {
     if (isLoggingOut) return;
     
@@ -282,6 +375,8 @@ export default function Home() {
               expenses={expenses}
               currentMonth={currentMonth}
               onMonthChange={setCurrentMonth}
+              budget={currentBudget}
+              onSetBudget={handleOpenBudgetModal}
             />
           </div>
         </div>
@@ -304,6 +399,15 @@ export default function Home() {
           onMonthChange={setCurrentMonth}
           isOpen={isFilterModalOpen}
           onClose={handleCloseFilterModal}
+        />
+
+        <BudgetForm
+          onSubmit={handleSetBudget}
+          editingBudget={editingBudget}
+          currentMonth={currentMonth}
+          onCancel={handleCancelBudgetEdit}
+          isOpen={isBudgetModalOpen}
+          onClose={handleCloseBudgetModal}
         />
       </div>
     </div>

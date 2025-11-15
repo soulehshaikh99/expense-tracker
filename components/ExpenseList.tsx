@@ -3,6 +3,7 @@
 import { Expense } from '@/types/expense';
 import { format } from 'date-fns';
 import { Pencil, Trash2, Plus, Filter } from 'lucide-react';
+import { formatNumber } from '@/lib/utils';
 
 interface ExpenseListProps {
   expenses: Expense[];
@@ -91,7 +92,7 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
                   {expense.title}
                 </td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
-                  ₹{expense.amount.toFixed(2)}
+                  ₹{formatNumber(expense.amount)}
                 </td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 hidden md:table-cell">
                   {expense.paymentMode}
@@ -157,7 +158,7 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
         <div className="flex justify-between items-center">
           <span className="text-xs sm:text-sm text-gray-600">Total Expenses:</span>
           <span className="text-base sm:text-lg font-semibold text-gray-900">
-            ₹{expenses.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
+            ₹{formatNumber(expenses.reduce((sum, e) => sum + e.amount, 0))}
           </span>
         </div>
       </div>
