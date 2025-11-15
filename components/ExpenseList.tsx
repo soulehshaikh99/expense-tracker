@@ -4,6 +4,7 @@ import { Expense } from '@/types/expense';
 import { format } from 'date-fns';
 import { Pencil, Trash2, Plus, Filter } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
+import ShimmerLoader from './ShimmerLoader';
 
 interface ExpenseListProps {
   expenses: Expense[];
@@ -12,9 +13,99 @@ interface ExpenseListProps {
   onMarkPaymentReceived: (id: string, received: boolean) => void;
   onOpenFilterModal: () => void;
   onOpenAddModal: () => void;
+  isLoading?: boolean;
 }
 
-export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentReceived, onOpenFilterModal, onOpenAddModal }: ExpenseListProps) {
+function ExpenseListSkeleton() {
+  const headerContent = (
+    <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+      <div className="flex flex-row justify-between items-center gap-2 sm:gap-0">
+        <ShimmerLoader width="120px" height="28px" className="sm:h-8" />
+        <div className="flex gap-2 sm:gap-3 flex-shrink-0">
+          <ShimmerLoader width="60px" height="32px" className="sm:w-24" rounded="md" />
+          <ShimmerLoader width="80px" height="32px" className="sm:w-32" rounded="md" />
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      {headerContent}
+      <div className="overflow-x-auto w-full">
+        <table className="w-full divide-y divide-gray-200" style={{ minWidth: '640px' }}>
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
+              </th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Title
+              </th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Amount
+              </th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                Payment Mode
+              </th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                For Whom
+              </th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                Payment Status
+              </th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {[...Array(6)].map((_, index) => (
+              <tr key={index} className="hover:bg-gray-50">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap">
+                  <ShimmerLoader width="90px" height="16px" className="sm:h-5" />
+                </td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3">
+                  <ShimmerLoader width="120px" height="16px" className="sm:h-5 sm:w-40" />
+                </td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap">
+                  <ShimmerLoader width="70px" height="16px" className="sm:h-5" />
+                </td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap hidden md:table-cell">
+                  <ShimmerLoader width="80px" height="16px" className="sm:h-5" />
+                </td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap">
+                  <ShimmerLoader width="50px" height="20px" className="sm:h-6 sm:w-16" rounded="full" />
+                </td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap hidden lg:table-cell">
+                  <ShimmerLoader width="80px" height="16px" className="sm:h-5" />
+                </td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-right">
+                  <div className="flex justify-end gap-1 sm:gap-2">
+                    <ShimmerLoader width="16px" height="16px" rounded="sm" />
+                    <ShimmerLoader width="16px" height="16px" rounded="sm" />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50">
+        <div className="flex justify-between items-center">
+          <ShimmerLoader width="100px" height="16px" className="sm:h-5" />
+          <ShimmerLoader width="80px" height="20px" className="sm:h-6 sm:w-32" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentReceived, onOpenFilterModal, onOpenAddModal, isLoading = false }: ExpenseListProps) {
+  if (isLoading) {
+    return <ExpenseListSkeleton />;
+  }
+
   const headerContent = (
     <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
       <div className="flex flex-row justify-between items-center gap-2 sm:gap-0">

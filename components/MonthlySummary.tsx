@@ -4,6 +4,7 @@ import { Expense, PaymentMode } from '@/types/expense';
 import { Budget } from '@/types/budget';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { formatNumber } from '@/lib/utils';
+import ShimmerLoader from './ShimmerLoader';
 
 interface MonthlySummaryProps {
   expenses: Expense[];
@@ -11,9 +12,88 @@ interface MonthlySummaryProps {
   onMonthChange: (month: Date) => void;
   budget: Budget | null;
   onSetBudget: () => void;
+  isLoading?: boolean;
 }
 
-export default function MonthlySummary({ expenses, currentMonth, onMonthChange, budget, onSetBudget }: MonthlySummaryProps) {
+function MonthlySummarySkeleton() {
+  return (
+    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 sticky top-4 sm:top-6">
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <ShimmerLoader width="180px" height="28px" className="sm:h-8" />
+        <ShimmerLoader width="80px" height="16px" className="sm:h-5" />
+      </div>
+
+      <div className="space-y-3 sm:space-y-4">
+        {/* Budget Section Skeleton */}
+        <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
+          <div className="flex justify-between items-center mb-2">
+            <ShimmerLoader width="100px" height="14px" className="sm:h-4" />
+            <ShimmerLoader width="80px" height="20px" className="sm:h-6 sm:w-32" />
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-3 mb-2">
+            <ShimmerLoader width="60%" height="100%" rounded="full" />
+          </div>
+          <div className="flex justify-between items-center">
+            <ShimmerLoader width="120px" height="14px" className="sm:h-4" />
+            <ShimmerLoader width="100px" height="14px" className="sm:h-4" />
+          </div>
+        </div>
+
+        {/* Summary Cards Skeleton */}
+        <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
+          <ShimmerLoader width="120px" height="14px" className="sm:h-4 mb-1" />
+          <ShimmerLoader width="100px" height="24px" className="sm:h-8 sm:w-40 mt-2" />
+        </div>
+
+        <div className="p-3 sm:p-4 bg-purple-50 rounded-lg">
+          <ShimmerLoader width="110px" height="14px" className="sm:h-4 mb-1" />
+          <ShimmerLoader width="100px" height="24px" className="sm:h-8 sm:w-40 mt-2" />
+          <div className="mt-2 space-y-1">
+            <ShimmerLoader width="80px" height="12px" className="sm:h-3" />
+            <ShimmerLoader width="80px" height="12px" className="sm:h-3" />
+          </div>
+        </div>
+
+        <div className="p-3 sm:p-4 bg-green-50 rounded-lg">
+          <ShimmerLoader width="160px" height="14px" className="sm:h-4 mb-1" />
+          <ShimmerLoader width="100px" height="24px" className="sm:h-8 sm:w-40 mt-2" />
+        </div>
+
+        {/* Payment Mode Section Skeleton */}
+        <div className="pt-4 border-t border-gray-200">
+          <ShimmerLoader width="120px" height="16px" className="sm:h-5 mb-3" />
+          <div className="space-y-2">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="flex justify-between items-center">
+                <ShimmerLoader width="80px" height="14px" className="sm:h-4" />
+                <ShimmerLoader width="60px" height="14px" className="sm:h-4" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Quick Stats Section Skeleton */}
+        <div className="pt-4 border-t border-gray-200">
+          <ShimmerLoader width="100px" height="16px" className="sm:h-5 mb-3" />
+          <div className="space-y-2">
+            {[...Array(3)].map((_, index) => (
+              <div key={index} className="flex justify-between">
+                <ShimmerLoader width="100px" height="14px" className="sm:h-4" />
+                <ShimmerLoader width="30px" height="14px" className="sm:h-4" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function MonthlySummary({ expenses, currentMonth, onMonthChange, budget, onSetBudget, isLoading = false }: MonthlySummaryProps) {
+  if (isLoading) {
+    return <MonthlySummarySkeleton />;
+  }
+
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
 

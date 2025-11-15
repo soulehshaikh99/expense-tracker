@@ -29,6 +29,8 @@ export default function Home() {
   const [currentBudget, setCurrentBudget] = useState<Budget | null>(null);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [isLoadingExpenses, setIsLoadingExpenses] = useState(true);
+  const [isLoadingBudgets, setIsLoadingBudgets] = useState(true);
 
   useEffect(() => {
     fetchExpenses();
@@ -42,6 +44,7 @@ export default function Home() {
 
   const fetchExpenses = async () => {
     try {
+      setIsLoadingExpenses(true);
       console.log('🔄 Attempting to fetch expenses from Firestore...');
       const q = query(collection(db, 'expenses'), orderBy('date', 'desc'));
       const querySnapshot = await getDocs(q);
@@ -85,6 +88,8 @@ export default function Home() {
       }
       
       alert(errorMessage);
+    } finally {
+      setIsLoadingExpenses(false);
     }
   };
 
@@ -229,6 +234,7 @@ export default function Home() {
 
   const fetchBudgets = async () => {
     try {
+      setIsLoadingBudgets(true);
       console.log('🔄 Attempting to fetch budgets from Firestore...');
       const q = query(collection(db, 'budgets'), orderBy('month', 'desc'));
       const querySnapshot = await getDocs(q);
@@ -248,6 +254,8 @@ export default function Home() {
     } catch (error: any) {
       console.error('❌ Error fetching budgets:', error);
       // Don't show alert for budgets as it's optional
+    } finally {
+      setIsLoadingBudgets(false);
     }
   };
 
@@ -367,6 +375,7 @@ export default function Home() {
               onMarkPaymentReceived={handleMarkPaymentReceived}
               onOpenFilterModal={handleOpenFilterModal}
               onOpenAddModal={handleOpenModal}
+              isLoading={isLoadingExpenses}
             />
           </div>
 
@@ -377,6 +386,7 @@ export default function Home() {
               onMonthChange={setCurrentMonth}
               budget={currentBudget}
               onSetBudget={handleOpenBudgetModal}
+              isLoading={isLoadingExpenses || isLoadingBudgets}
             />
           </div>
         </div>
