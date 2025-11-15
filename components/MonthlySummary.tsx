@@ -134,11 +134,14 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
   const budgetPercentageForBar = budgetPercentage !== null ? Math.min(budgetPercentage, 100) : null;
   
   // Determine color based on budget percentage
+  // Green: < 80% (safe zone)
+  // Yellow/Warning: >= 80% and < 100% (warning zone)
+  // Red: >= 100% (exceeded budget)
   const getBudgetColor = () => {
     if (budgetPercentage === null) return 'gray';
-    if (budgetPercentage < 80) return 'green';
-    if (budgetPercentage < 100) return 'yellow';
-    return 'red';
+    if (budgetPercentage >= 100) return 'red';
+    if (budgetPercentage >= 80) return 'yellow';
+    return 'green';
   };
 
   const budgetColor = getBudgetColor();
@@ -200,7 +203,9 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
               </span>
               {remainingBudget !== null && (
                 <span className={`font-semibold text-right ${
-                  remainingBudget >= 0 ? 'text-green-700' : 'text-red-700'
+                  remainingBudget < 0 ? 'text-red-700' :
+                  budgetColor === 'yellow' ? 'text-yellow-700' :
+                  'text-green-700'
                 }`}>
                   {remainingBudget >= 0 
                     ? `Remaining: ₹${formatNumber(remainingBudget)}`
