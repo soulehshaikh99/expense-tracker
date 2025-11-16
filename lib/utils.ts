@@ -1,3 +1,5 @@
+import { Expense } from '@/types/expense';
+
 /**
  * Format a number with commas and fixed decimal places
  * @param value - The number to format
@@ -29,8 +31,8 @@ export function getMonthsWithData(expenses: { date: Date }[]): string[] {
  * @param expenses - Array of expenses
  * @returns Map of month keys to expenses
  */
-export function groupExpensesByMonth(expenses: { date: Date }[]): Map<string, typeof expenses> {
-  const grouped = new Map<string, typeof expenses>();
+export function groupExpensesByMonth(expenses: Expense[]): Map<string, Expense[]> {
+  const grouped = new Map<string, Expense[]>();
   expenses.forEach((expense) => {
     const monthKey = `${expense.date.getFullYear()}-${String(expense.date.getMonth() + 1).padStart(2, '0')}`;
     if (!grouped.has(monthKey)) {
