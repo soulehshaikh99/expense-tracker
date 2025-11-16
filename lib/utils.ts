@@ -10,3 +10,34 @@ export function formatNumber(value: number, decimals: number = 2): string {
   return formatted.replace(/\.00$/, '');
 }
 
+/**
+ * Get unique months from expenses
+ * @param expenses - Array of expenses
+ * @returns Array of month keys in format "YYYY-MM"
+ */
+export function getMonthsWithData(expenses: { date: Date }[]): string[] {
+  const monthSet = new Set<string>();
+  expenses.forEach((expense) => {
+    const monthKey = `${expense.date.getFullYear()}-${String(expense.date.getMonth() + 1).padStart(2, '0')}`;
+    monthSet.add(monthKey);
+  });
+  return Array.from(monthSet).sort();
+}
+
+/**
+ * Group expenses by month
+ * @param expenses - Array of expenses
+ * @returns Map of month keys to expenses
+ */
+export function groupExpensesByMonth(expenses: { date: Date }[]): Map<string, typeof expenses> {
+  const grouped = new Map<string, typeof expenses>();
+  expenses.forEach((expense) => {
+    const monthKey = `${expense.date.getFullYear()}-${String(expense.date.getMonth() + 1).padStart(2, '0')}`;
+    if (!grouped.has(monthKey)) {
+      grouped.set(monthKey, []);
+    }
+    grouped.get(monthKey)!.push(expense);
+  });
+  return grouped;
+}
+

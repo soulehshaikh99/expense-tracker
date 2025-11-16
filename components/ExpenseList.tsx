@@ -2,7 +2,7 @@
 
 import { Expense } from '@/types/expense';
 import { format } from 'date-fns';
-import { Pencil, Trash2, Plus, Filter } from 'lucide-react';
+import { Pencil, Trash2, Plus, Filter, Search } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 import ShimmerLoader from './ShimmerLoader';
 
@@ -14,6 +14,9 @@ interface ExpenseListProps {
   onOpenFilterModal: () => void;
   onOpenAddModal: () => void;
   isLoading?: boolean;
+  hasActiveFilters?: boolean;
+  totalExpensesCount?: number;
+  onClearFilters?: () => void;
 }
 
 function ExpenseListSkeleton() {
@@ -101,7 +104,7 @@ function ExpenseListSkeleton() {
   );
 }
 
-export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentReceived, onOpenFilterModal, onOpenAddModal, isLoading = false }: ExpenseListProps) {
+export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentReceived, onOpenFilterModal, onOpenAddModal, isLoading = false, hasActiveFilters = false, totalExpensesCount = 0, onClearFilters }: ExpenseListProps) {
   if (isLoading) {
     return <ExpenseListSkeleton />;
   }
@@ -133,11 +136,57 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
   );
 
   if (expenses.length === 0) {
+    const hasFilters = hasActiveFilters ?? false;
+    const hasAnyExpenses = (totalExpensesCount ?? 0) > 0;
+
     return (
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         {headerContent}
-        <div className="p-4 sm:p-6 text-center text-gray-500 text-sm sm:text-base">
-          <p>No expenses found for the selected filters.</p>
+        <div className="py-12 sm:py-16 px-4 text-center">
+          {hasFilters && hasAnyExpenses ? (
+            <>
+              <Search 
+                className="w-16 h-16 sm:w-20 sm:h-20 text-gray-400 mx-auto mb-4" 
+                aria-hidden="true"
+              />
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
+                No expenses match your filters
+              </h3>
+              <p className="text-sm sm:text-base text-gray-600 mb-6 max-w-md mx-auto">
+                Try adjusting your filters or select a different month to see more expenses.
+              </p>
+              {onClearFilters && (
+                <button
+                  onClick={onClearFilters}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
+                >
+                  Clear Filters
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <img 
+                src="/icons/empty-expenses-state.svg" 
+                alt="" 
+                className="w-24 h-24 sm:w-36 sm:h-36 mx-auto mb-4" 
+                aria-hidden="true"
+              />
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
+                No expenses yet
+              </h3>
+              <p className="text-sm sm:text-base text-gray-600 mb-6 max-w-md mx-auto">
+                Start tracking your expenses by adding your first expense entry.
+              </p>
+              <button
+                onClick={onOpenAddModal}
+                className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              >
+                <Plus size={18} />
+                <span>Add Your First Expense</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     );

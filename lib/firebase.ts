@@ -24,11 +24,6 @@ if (typeof window !== 'undefined') {
   if (missingConfig.length > 0) {
     console.error('❌ Missing Firebase configuration:', missingConfig);
     console.error('Please check your .env.local file.');
-  } else {
-    console.log('✅ Firebase configuration loaded:', {
-      projectId: firebaseConfig.projectId,
-      authDomain: firebaseConfig.authDomain,
-    });
   }
 }
 
@@ -39,11 +34,6 @@ let db: Firestore;
 try {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
   db = getFirestore(app);
-  
-  if (typeof window !== 'undefined') {
-    console.log('✅ Firebase initialized successfully');
-    console.log('✅ Firestore database initialized');
-  }
 } catch (error: any) {
   console.error('❌ Firebase initialization error:', error);
   if (typeof window !== 'undefined') {

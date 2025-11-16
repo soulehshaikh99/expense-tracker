@@ -10,11 +10,12 @@ interface BudgetFormProps {
   editingBudget: Budget | null;
   currentMonth: Date;
   onCancel: () => void;
+  onDelete?: () => void;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export default function BudgetForm({ onSubmit, editingBudget, currentMonth, onCancel, isOpen, onClose }: BudgetFormProps) {
+export default function BudgetForm({ onSubmit, editingBudget, currentMonth, onCancel, onDelete, isOpen, onClose }: BudgetFormProps) {
   const [amount, setAmount] = useState('');
 
   useEffect(() => {
@@ -132,21 +133,21 @@ export default function BudgetForm({ onSubmit, editingBudget, currentMonth, onCa
             </div>
 
             <div className="flex gap-3">
+              {editingBudget && onDelete && (
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  className="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+                >
+                  Remove Budget
+                </button>
+              )}
               <button
                 type="submit"
                 className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               >
                 {editingBudget ? 'Update Budget' : 'Set Budget'}
               </button>
-              {editingBudget && (
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
-                >
-                  Cancel
-                </button>
-              )}
             </div>
           </form>
         </div>

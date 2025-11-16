@@ -10,17 +10,20 @@ interface ExpenseFormProps {
   onCancel: () => void;
   isOpen: boolean;
   onClose: () => void;
+  forWhomSuggestions?: string[];
 }
 
 const paymentModes: PaymentMode[] = ['Credit Card', 'Debit Card', 'UPI', 'Cash'];
 
-export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen, onClose }: ExpenseFormProps) {
+export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen, onClose, forWhomSuggestions = [] }: ExpenseFormProps) {
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('Credit Card');
   const [forWhom, setForWhom] = useState('Self');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentReceived, setPaymentReceived] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   const formatDateForInput = (date: Date) => {
     return new Date(date).toISOString().split('T')[0];
@@ -97,6 +100,102 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
     onCancel();
     onClose();
   };
+
+  // Filter suggestions based on input
+  // Always include "Self" in suggestions if it matches, and show all suggestions when field is empty
+  const filteredSuggestions = (() => {
+    const input = forWhom.trim().toLowerCase();
+    if (input === '') {
+      // Show all suggestions when field is empty, with "Self" first
+      const allSuggestions = [...forWhomSuggestions];
+      const selfIndex = allSuggestions.indexOf('Self');
+      if (selfIndex > -1) {
+        allSuggestions.splice(selfIndex, 1);
+      }
+      return ['Self', ...allSuggestions];
+    }
+    
+    // Filter suggestions that match the input
+    const matching = forWhomSuggestions.filter(suggestion =>
+      suggestion.toLowerCase().includes(input) &&
+      suggestion.toLowerCase() !== input
+    );
+    
+    // Always include "Self" if it matches, and put it first
+    const selfMatches = input === 'self' || 'self'.includes(input);
+    if (selfMatches && !matching.includes('Self')) {
+      return ['Self', ...matching];
+    }
+    
+    return matching;
+  })();
+
+  const handleForWhomChange = (value: string) => {
+    setForWhom(value);
+    setShowSuggestions(true);
+    setHighlightedIndex(-1);
+  };
+
+  const handleForWhomFocus = () => {
+    setShowSuggestions(true);
+  };
+
+  const handleSelectSuggestion = (suggestion: string) => {
+    setForWhom(suggestion);
+    setShowSuggestions(false);
+    setHighlightedIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || filteredSuggestions.length === 0) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        return;
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setHighlightedIndex(prev =>
+          prev < filteredSuggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setHighlightedIndex(prev => (prev > 0 ? prev - 1 : -1));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length) {
+          handleSelectSuggestion(filteredSuggestions[highlightedIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+        break;
+    }
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.for-whom-autocomplete')) {
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+      }
+    };
+
+    if (showSuggestions) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showSuggestions]);
 
   if (!isOpen) return null;
 
@@ -175,7 +274,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
           </select>
         </div>
 
-        <div>
+        <div className="for-whom-autocomplete relative">
           <label htmlFor="forWhom" className="block text-sm font-medium text-gray-700 mb-1">
             For Whom *
           </label>
@@ -183,11 +282,37 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
             type="text"
             id="forWhom"
             value={forWhom}
-            onChange={(e) => setForWhom(e.target.value)}
+            onChange={(e) => handleForWhomChange(e.target.value)}
+            onFocus={handleForWhomFocus}
+            onKeyDown={handleKeyDown}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Self or person's name"
             required
+            autoComplete="off"
           />
+          {showSuggestions && filteredSuggestions.length > 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+              {filteredSuggestions.map((suggestion, index) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => handleSelectSuggestion(suggestion)}
+                  className={`w-full text-left px-3 py-2 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none transition-colors ${
+                    index === highlightedIndex ? 'bg-blue-50' : 'bg-white'
+                  }`}
+                  onMouseEnter={() => setHighlightedIndex(index)}
+                >
+                  <span className="text-sm text-gray-900">
+                    {suggestion === 'Self' ? (
+                      <span className="font-medium text-green-700">{suggestion}</span>
+                    ) : (
+                      suggestion
+                    )}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div>

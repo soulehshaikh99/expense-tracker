@@ -50,7 +50,6 @@ export default function FirebaseStatus() {
       setTimeout(async () => {
         try {
           await deleteDoc(doc(db, 'expenses', testDoc.id));
-          console.log('Test document cleaned up');
         } catch (e) {
           console.error('Failed to clean up test document:', e);
         }

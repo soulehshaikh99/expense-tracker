@@ -11,6 +11,7 @@ import ExpenseList from '@/components/ExpenseList';
 import ExpenseFilters from '@/components/ExpenseFilters';
 import MonthlySummary from '@/components/MonthlySummary';
 import BudgetForm from '@/components/BudgetForm';
+import MonthlyTrendChart from '@/components/MonthlyTrendChart';
 // import FirebaseStatus from '@/components/FirebaseStatus';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
@@ -45,7 +46,6 @@ export default function Home() {
   const fetchExpenses = async () => {
     try {
       setIsLoadingExpenses(true);
-      console.log('🔄 Attempting to fetch expenses from Firestore...');
       const q = query(collection(db, 'expenses'), orderBy('date', 'desc'));
       const querySnapshot = await getDocs(q);
       const expensesData: Expense[] = [];
@@ -63,7 +63,6 @@ export default function Home() {
         });
       });
       setExpenses(expensesData);
-      console.log(`✅ Successfully fetched ${expensesData.length} expenses`);
     } catch (error: any) {
       console.error('❌ Error fetching expenses:', error);
       console.error('Error code:', error.code);
@@ -118,7 +117,6 @@ export default function Home() {
 
   const handleAddExpense = async (expenseData: Omit<Expense, 'id'>) => {
     try {
-      console.log('🔄 Attempting to add expense:', expenseData);
       const expensePayload = {
         title: expenseData.title,
         amount: expenseData.amount,
@@ -132,7 +130,6 @@ export default function Home() {
       };
       
       await addDoc(collection(db, 'expenses'), expensePayload);
-      console.log('✅ Expense added successfully');
       fetchExpenses();
     } catch (error: any) {
       console.error('❌ Error adding expense:', error);
@@ -214,6 +211,19 @@ export default function Home() {
     setIsFilterModalOpen(false);
   };
 
+  const handleClearFilters = () => {
+    setSelectedPaymentMode('All');
+    setSelectedForWhom('All');
+    setCurrentMonth(new Date());
+    setIsFilterModalOpen(false);
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = selectedPaymentMode !== 'All' || 
+                          selectedForWhom !== 'All' || 
+                          (currentMonth.getMonth() !== new Date().getMonth() || 
+                           currentMonth.getFullYear() !== new Date().getFullYear());
+
   const handleMarkPaymentReceived = async (id: string, received: boolean) => {
     try {
       const expenseRef = doc(db, 'expenses', id);
@@ -235,7 +245,6 @@ export default function Home() {
   const fetchBudgets = async () => {
     try {
       setIsLoadingBudgets(true);
-      console.log('🔄 Attempting to fetch budgets from Firestore...');
       const q = query(collection(db, 'budgets'), orderBy('month', 'desc'));
       const querySnapshot = await getDocs(q);
       const budgetsData: Budget[] = [];
@@ -250,7 +259,6 @@ export default function Home() {
         });
       });
       setBudgets(budgetsData);
-      console.log(`✅ Successfully fetched ${budgetsData.length} budgets`);
     } catch (error: any) {
       console.error('❌ Error fetching budgets:', error);
       // Don't show alert for budgets as it's optional
@@ -288,7 +296,6 @@ export default function Home() {
           amount: budgetData.amount,
           updatedAt: now,
         });
-        console.log('✅ Budget updated successfully');
       } else {
         // Create new budget
         await addDoc(collection(db, 'budgets'), {
@@ -297,7 +304,6 @@ export default function Home() {
           createdAt: now,
           updatedAt: now,
         });
-        console.log('✅ Budget created successfully');
       }
       fetchBudgets();
     } catch (error: any) {
@@ -318,6 +324,27 @@ export default function Home() {
 
   const handleCancelBudgetEdit = () => {
     setEditingBudget(null);
+  };
+
+  const handleDeleteBudget = async () => {
+    // Use editingBudget if available (when modal is open), otherwise use currentBudget
+    const budgetToDelete = editingBudget || currentBudget;
+    if (!budgetToDelete) return;
+    
+    if (!confirm('Are you sure you want to remove the budget for this month?')) {
+      return;
+    }
+
+    try {
+      const budgetRef = doc(db, 'budgets', budgetToDelete.id);
+      await deleteDoc(budgetRef);
+      fetchBudgets();
+      setIsBudgetModalOpen(false);
+      setEditingBudget(null);
+    } catch (error: any) {
+      console.error('❌ Error deleting budget:', error);
+      alert('Failed to delete budget. Please try again.');
+    }
   };
 
   const handleLogout = async () => {
@@ -376,6 +403,9 @@ export default function Home() {
               onOpenFilterModal={handleOpenFilterModal}
               onOpenAddModal={handleOpenModal}
               isLoading={isLoadingExpenses}
+              hasActiveFilters={hasActiveFilters}
+              totalExpensesCount={expenses.length}
+              onClearFilters={handleClearFilters}
             />
           </div>
 
@@ -391,12 +421,18 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Monthly Trend Chart - Shows when 2+ months of data exist */}
+        <div className="mt-4 sm:mt-6">
+          <MonthlyTrendChart expenses={expenses} budgets={budgets} />
+        </div>
+
         <ExpenseForm
           onSubmit={editingExpense ? (data) => handleUpdateExpense(editingExpense.id, data) : handleAddExpense}
           editingExpense={editingExpense}
           onCancel={handleCancelEdit}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
+          forWhomSuggestions={getUniqueForWhomValues()}
         />
 
         <ExpenseFilters
@@ -416,6 +452,7 @@ export default function Home() {
           editingBudget={editingBudget}
           currentMonth={currentMonth}
           onCancel={handleCancelBudgetEdit}
+          onDelete={handleDeleteBudget}
           isOpen={isBudgetModalOpen}
           onClose={handleCloseBudgetModal}
         />
