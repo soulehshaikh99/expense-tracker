@@ -101,8 +101,12 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
     isWithinInterval(expense.date, { start: monthStart, end: monthEnd })
   );
 
-  const selfExpenses = monthExpenses.filter((e) => e.forWhom === 'Self');
-  const otherExpenses = monthExpenses.filter((e) => e.forWhom !== 'Self');
+  // Separate expenses and income
+  const expenseTransactions = monthExpenses.filter((e) => (e.transactionType || 'expense') === 'expense');
+  const incomeTransactions = monthExpenses.filter((e) => e.transactionType === 'income');
+
+  const selfExpenses = expenseTransactions.filter((e) => e.forWhom === 'Self');
+  const otherExpenses = expenseTransactions.filter((e) => e.forWhom !== 'Self');
   const receivedExpenses = otherExpenses.filter((e) => e.paymentReceived);
   const pendingExpenses = otherExpenses.filter((e) => !e.paymentReceived);
 
@@ -110,6 +114,7 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
   const totalSpentForOthers = otherExpenses.reduce((sum, e) => sum + e.amount, 0);
   const totalReceived = receivedExpenses.reduce((sum, e) => sum + e.amount, 0);
   const totalPending = pendingExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalIncome = incomeTransactions.reduce((sum, e) => sum + e.amount, 0);
 
   const paymentModeTotals: Record<PaymentMode, number> = {
     'Credit Card': 0,
@@ -118,11 +123,13 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
     Cash: 0,
   };
 
-  monthExpenses.forEach((expense) => {
+  // Only count expenses in payment mode totals (not income)
+  expenseTransactions.forEach((expense) => {
     paymentModeTotals[expense.paymentMode] += expense.amount;
   });
 
-  const netAmount = totalSpentByMe + totalPending;
+  // Net amount = expenses + pending - income (income reduces net spending)
+  const netAmount = totalSpentByMe + totalPending - totalIncome;
 
   // Budget calculations
   const budgetAmount = budget?.amount || null;
@@ -240,8 +247,13 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
           </div>
         </div>
 
+        <div className="p-3 sm:p-4 bg-yellow-50 rounded-lg">
+          <div className="text-xs sm:text-sm text-gray-600 mb-1">Money Received</div>
+          <div className="text-xl sm:text-2xl font-bold text-yellow-900">₹{formatNumber(totalIncome)}</div>
+        </div>
+
         <div className="p-3 sm:p-4 bg-green-50 rounded-lg">
-          <div className="text-xs sm:text-sm text-gray-600 mb-1">Net Amount (Me + Pending)</div>
+          <div className="text-xs sm:text-sm text-gray-600 mb-1">Net Amount (Me + Pending - Income)</div>
           <div className="text-xl sm:text-2xl font-bold text-green-900">₹{formatNumber(netAmount)}</div>
         </div>
 

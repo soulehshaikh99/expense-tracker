@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Expense, PaymentMode } from '@/types/expense';
+import { Expense, PaymentMode, TransactionType } from '@/types/expense';
 import { X } from 'lucide-react';
 
 interface ExpenseFormProps {
@@ -21,6 +21,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('Credit Card');
   const [forWhom, setForWhom] = useState('Self');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [transactionType, setTransactionType] = useState<TransactionType>('expense');
   const [paymentReceived, setPaymentReceived] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -36,6 +37,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
       setPaymentMode(editingExpense.paymentMode);
       setForWhom(editingExpense.forWhom);
       setDate(formatDateForInput(editingExpense.date));
+      setTransactionType(editingExpense.transactionType || 'expense');
       setPaymentReceived(editingExpense.paymentReceived || false);
     } else {
       resetForm();
@@ -66,6 +68,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
     setPaymentMode('Credit Card');
     setForWhom('Self');
     setDate(new Date().toISOString().split('T')[0]);
+    setTransactionType('expense');
     setPaymentReceived(false);
   };
 
@@ -85,8 +88,9 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
       paymentMode,
       forWhom: normalizedForWhom,
       date: new Date(date),
-      paymentReceived: normalizedForWhom !== 'Self' ? paymentReceived : false,
-      paymentReceivedDate: normalizedForWhom !== 'Self' && paymentReceived ? new Date() : undefined,
+      transactionType,
+      paymentReceived: transactionType === 'expense' && normalizedForWhom !== 'Self' ? paymentReceived : false,
+      paymentReceivedDate: transactionType === 'expense' && normalizedForWhom !== 'Self' && paymentReceived ? new Date() : undefined,
     };
 
     onSubmit(expenseData);
@@ -211,7 +215,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
       <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto m-2 sm:m-0">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10">
           <h2 className="text-lg sm:text-2xl font-semibold text-gray-800 pr-2">
-            {editingExpense ? 'Edit Expense' : 'Add New Expense'}
+            {editingExpense ? 'Edit Transaction' : 'Add New Transaction'}
           </h2>
           <button
             onClick={onClose}
@@ -225,8 +229,43 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
         <div className="p-4 sm:p-6">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Transaction Type *
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="transactionType"
+                value="expense"
+                checked={transactionType === 'expense'}
+                onChange={(e) => {
+                  setTransactionType(e.target.value as TransactionType);
+                }}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+              />
+              <span className="ml-2 text-sm text-gray-700">Expense</span>
+            </label>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="transactionType"
+                value="income"
+                checked={transactionType === 'income'}
+                onChange={(e) => {
+                  setTransactionType(e.target.value as TransactionType);
+                  setPaymentReceived(false);
+                }}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+              />
+              <span className="ml-2 text-sm text-gray-700">Income</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
           <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-            Expense Title *
+            {transactionType === 'income' ? 'Income Title' : 'Expense Title'} *
           </label>
           <input
             type="text"
@@ -276,7 +315,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
 
         <div className="for-whom-autocomplete relative">
           <label htmlFor="forWhom" className="block text-sm font-medium text-gray-700 mb-1">
-            For Whom *
+            {transactionType === 'income' ? 'From Whom' : 'For Whom'} *
           </label>
           <input
             type="text"
@@ -286,7 +325,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
             onFocus={handleForWhomFocus}
             onKeyDown={handleKeyDown}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Self or person's name"
+            placeholder={transactionType === 'income' ? "Person's name" : "Self or person's name"}
             required
             autoComplete="off"
           />
@@ -329,7 +368,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
           />
         </div>
 
-        {forWhom !== 'Self' && (
+        {transactionType === 'expense' && forWhom !== 'Self' && (
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -349,7 +388,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
             type="submit"
             className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
           >
-            {editingExpense ? 'Update Expense' : 'Add Expense'}
+            {editingExpense ? 'Update Transaction' : 'Add Transaction'}
           </button>
           {editingExpense && (
             <button

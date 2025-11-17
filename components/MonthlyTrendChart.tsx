@@ -21,6 +21,7 @@ interface MonthlyData {
   totalSpentForOthers: number;
   totalReceived: number;
   totalPending: number;
+  totalIncome: number;
 }
 
 export default function MonthlyTrendChart({ expenses, budgets }: MonthlyTrendChartProps) {
@@ -90,8 +91,12 @@ export default function MonthlyTrendChart({ expenses, budgets }: MonthlyTrendCha
   const monthlyData: MonthlyData[] = monthsWithData.map((monthKey) => {
     const monthExpenses = groupedExpenses.get(monthKey) || [];
     
-    const selfExpenses = monthExpenses.filter((e) => e.forWhom === 'Self');
-    const otherExpenses = monthExpenses.filter((e) => e.forWhom !== 'Self');
+    // Separate expenses and income
+    const expenseTransactions = monthExpenses.filter((e) => (e.transactionType || 'expense') === 'expense');
+    const incomeTransactions = monthExpenses.filter((e) => e.transactionType === 'income');
+    
+    const selfExpenses = expenseTransactions.filter((e) => e.forWhom === 'Self');
+    const otherExpenses = expenseTransactions.filter((e) => e.forWhom !== 'Self');
     const receivedExpenses = otherExpenses.filter((e) => e.paymentReceived);
     const pendingExpenses = otherExpenses.filter((e) => !e.paymentReceived);
 
@@ -99,7 +104,8 @@ export default function MonthlyTrendChart({ expenses, budgets }: MonthlyTrendCha
     const totalSpentForOthers = otherExpenses.reduce((sum, e) => sum + e.amount, 0);
     const totalReceived = receivedExpenses.reduce((sum, e) => sum + e.amount, 0);
     const totalPending = pendingExpenses.reduce((sum, e) => sum + e.amount, 0);
-    const netAmount = totalSpentByMe + totalPending;
+    const totalIncome = incomeTransactions.reduce((sum, e) => sum + e.amount, 0);
+    const netAmount = totalSpentByMe + totalPending - totalIncome;
 
     const budget = budgetsByMonth.get(monthKey);
     const budgetAmount = budget ? budget.amount : null;
@@ -118,6 +124,7 @@ export default function MonthlyTrendChart({ expenses, budgets }: MonthlyTrendCha
       totalSpentForOthers,
       totalReceived,
       totalPending,
+      totalIncome,
     };
   });
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, addDoc, updateDoc, deleteDoc, doc, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Expense, PaymentMode } from '@/types/expense';
+import { Expense, PaymentMode, TransactionType } from '@/types/expense';
 import { Budget } from '@/types/budget';
 import ExpenseForm from '@/components/ExpenseForm';
 import ExpenseList from '@/components/ExpenseList';
@@ -24,6 +24,7 @@ export default function Home() {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [selectedPaymentMode, setSelectedPaymentMode] = useState<PaymentMode | 'All'>('All');
   const [selectedForWhom, setSelectedForWhom] = useState<string>('All');
+  const [selectedTransactionType, setSelectedTransactionType] = useState<TransactionType | 'All'>('All');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -41,7 +42,7 @@ export default function Home() {
   useEffect(() => {
     applyFilters();
     updateCurrentBudget();
-  }, [expenses, selectedPaymentMode, selectedForWhom, currentMonth, budgets]);
+  }, [expenses, selectedPaymentMode, selectedForWhom, selectedTransactionType, currentMonth, budgets]);
 
   const fetchExpenses = async () => {
     try {
@@ -58,6 +59,7 @@ export default function Home() {
           paymentMode: data.paymentMode,
           forWhom: data.forWhom,
           date: data.date.toDate(),
+          transactionType: data.transactionType || 'expense', // Default to 'expense' for backward compatibility
           paymentReceived: data.paymentReceived || false,
           paymentReceivedDate: data.paymentReceivedDate ? data.paymentReceivedDate.toDate() : undefined,
         });
@@ -102,6 +104,11 @@ export default function Home() {
       isWithinInterval(expense.date, { start: monthStart, end: monthEnd })
     );
 
+    // Filter by transaction type
+    if (selectedTransactionType !== 'All') {
+      filtered = filtered.filter((expense) => (expense.transactionType || 'expense') === selectedTransactionType);
+    }
+
     // Filter by payment mode
     if (selectedPaymentMode !== 'All') {
       filtered = filtered.filter((expense) => expense.paymentMode === selectedPaymentMode);
@@ -123,6 +130,7 @@ export default function Home() {
         paymentMode: expenseData.paymentMode,
         forWhom: expenseData.forWhom,
         date: Timestamp.fromDate(expenseData.date),
+        transactionType: expenseData.transactionType || 'expense',
         paymentReceived: expenseData.paymentReceived || false,
         paymentReceivedDate: expenseData.paymentReceivedDate
           ? Timestamp.fromDate(expenseData.paymentReceivedDate)
@@ -164,6 +172,7 @@ export default function Home() {
       await updateDoc(expenseRef, {
         ...expenseData,
         date: Timestamp.fromDate(expenseData.date),
+        transactionType: expenseData.transactionType || 'expense',
         paymentReceivedDate: expenseData.paymentReceivedDate
           ? Timestamp.fromDate(expenseData.paymentReceivedDate)
           : null,
@@ -214,13 +223,15 @@ export default function Home() {
   const handleClearFilters = () => {
     setSelectedPaymentMode('All');
     setSelectedForWhom('All');
+    setSelectedTransactionType('All');
     setCurrentMonth(new Date());
     setIsFilterModalOpen(false);
   };
 
   // Check if any filters are active
   const hasActiveFilters = selectedPaymentMode !== 'All' || 
-                          selectedForWhom !== 'All' || 
+                          selectedForWhom !== 'All' ||
+                          selectedTransactionType !== 'All' ||
                           (currentMonth.getMonth() !== new Date().getMonth() || 
                            currentMonth.getFullYear() !== new Date().getFullYear());
 
@@ -438,10 +449,12 @@ export default function Home() {
         <ExpenseFilters
           selectedPaymentMode={selectedPaymentMode}
           selectedForWhom={selectedForWhom}
+          selectedTransactionType={selectedTransactionType}
           forWhomOptions={getUniqueForWhomValues()}
           currentMonth={currentMonth}
           onPaymentModeChange={setSelectedPaymentMode}
           onForWhomChange={setSelectedForWhom}
+          onTransactionTypeChange={setSelectedTransactionType}
           onMonthChange={setCurrentMonth}
           isOpen={isFilterModalOpen}
           onClose={handleCloseFilterModal}

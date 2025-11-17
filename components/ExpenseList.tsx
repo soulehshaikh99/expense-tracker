@@ -52,7 +52,7 @@ function ExpenseListSkeleton() {
                 Payment Mode
               </th>
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                For Whom
+                For/From Whom
               </th>
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                 Payment Status
@@ -125,10 +125,10 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
           <button
             onClick={onOpenAddModal}
             className="flex items-center justify-center gap-1.25 sm:gap-1.5 bg-blue-600 text-white px-2.5 sm:px-3 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors text-xs sm:text-sm whitespace-nowrap"
-            aria-label="Add Expense"
+            aria-label="Add"
           >
             <Plus size={16} />
-            <span className="hidden sm:inline">Add Expense</span>
+            <span className="hidden sm:inline">Add</span>
           </button>
         </div>
       </div>
@@ -212,7 +212,7 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
                 Payment Mode
               </th>
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                For Whom
+                For/From Whom
               </th>
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                 Payment Status
@@ -247,9 +247,14 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
                       {expense.forWhom}
                     </span>
                   )}
+                  {(expense.transactionType || 'expense') === 'income' && (
+                    <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                      Income
+                    </span>
+                  )}
                 </td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm hidden lg:table-cell">
-                  {expense.forWhom !== 'Self' ? (
+                  {(expense.transactionType || 'expense') === 'expense' && expense.forWhom !== 'Self' ? (
                     <label className="flex items-center">
                       <input
                         type="checkbox"
@@ -296,9 +301,12 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
       </div>
       <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50">
         <div className="flex justify-between items-center">
-          <span className="text-xs sm:text-sm text-gray-600">Total Expenses:</span>
+          <span className="text-xs sm:text-sm text-gray-600">Total:</span>
           <span className="text-base sm:text-lg font-semibold text-gray-900">
-            ₹{formatNumber(expenses.reduce((sum, e) => sum + e.amount, 0))}
+            ₹{formatNumber(
+              expenses.filter((e) => (e.transactionType || 'expense') === 'expense').reduce((sum, e) => sum + e.amount, 0) -
+              expenses.filter((e) => e.transactionType === 'income').reduce((sum, e) => sum + e.amount, 0)
+            )}
           </span>
         </div>
       </div>
