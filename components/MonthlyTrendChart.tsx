@@ -6,6 +6,7 @@ import { format, startOfMonth } from 'date-fns';
 import { formatNumber, getMonthsWithData, groupExpensesByMonth } from '@/lib/utils';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Image from 'next/image';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface MonthlyTrendChartProps {
   expenses: Expense[];
@@ -25,6 +26,7 @@ interface MonthlyData {
 }
 
 export default function MonthlyTrendChart({ expenses, budgets }: MonthlyTrendChartProps) {
+  const { resolvedTheme } = useTheme();
   // Get unique months with data
   const monthsWithData = getMonthsWithData(expenses);
   
@@ -35,8 +37,8 @@ export default function MonthlyTrendChart({ expenses, budgets }: MonthlyTrendCha
     const progress = (monthsWithData.length / 2) * 100;
 
     return (
-      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-        <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+        <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">
           Spending Trends
         </h2>
         
@@ -47,12 +49,12 @@ export default function MonthlyTrendChart({ expenses, budgets }: MonthlyTrendCha
             className="w-24 h-24 sm:w-36 sm:h-36 mx-auto mb-4" 
             aria-hidden="true"
           />
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
             {monthsWithData.length === 0 
               ? "Start tracking to see trends"
               : "Almost there!"}
           </h3>
-          <p className="text-sm sm:text-base text-gray-600 mb-6 max-w-md text-center">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6 max-w-md text-center">
             {monthsWithData.length === 0
               ? "Track expenses for 2 or more months to visualize your spending trends and patterns over time."
               : `You've tracked ${monthsWithData.length} month${monthsWithData.length > 1 ? 's' : ''}. Track ${monthsNeeded} more month${monthsNeeded > 1 ? 's' : ''} to unlock spending trends.`}
@@ -60,11 +62,11 @@ export default function MonthlyTrendChart({ expenses, budgets }: MonthlyTrendCha
           
           {hasOneMonth && (
             <div className="w-full max-w-xs mb-4">
-              <div className="flex justify-between text-xs text-gray-600 mb-2">
+              <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
                 <span>Progress</span>
                 <span>{monthsWithData.length} of 2 months</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                 <div
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${progress}%` }}
@@ -135,10 +137,10 @@ export default function MonthlyTrendChart({ expenses, budgets }: MonthlyTrendCha
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-gray-800 mb-2">{label}</p>
+        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
+          <p className="font-semibold text-gray-800 dark:text-gray-200 mb-2">{label}</p>
           {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
+            <p key={index} className="text-sm dark:text-gray-300" style={{ color: entry.color }}>
               {entry.name}: <span className="font-semibold">₹{formatNumber(entry.value)}</span>
             </p>
           ))}
@@ -158,23 +160,30 @@ export default function MonthlyTrendChart({ expenses, budgets }: MonthlyTrendCha
     return `₹${value}`;
   };
 
+  // Get theme-aware colors
+  const isDark = resolvedTheme === 'dark';
+  const chartColors = {
+    grid: isDark ? '#374151' : '#e5e7eb',
+    axis: isDark ? '#9ca3af' : '#6b7280',
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-6">
-      <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">Spending Trends</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 space-y-6">
+      <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-gray-200">Spending Trends</h2>
       
       {/* Primary Chart: Monthly Spending Trend */}
       <div>
-        <h3 className="text-sm sm:text-base font-medium text-gray-700 mb-3">Monthly Spending Overview</h3>
+        <h3 className="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300 mb-3">Monthly Spending Overview</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={monthlyData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
             <XAxis 
               dataKey="month" 
-              stroke="#6b7280"
+              stroke={chartColors.axis}
               style={{ fontSize: '12px' }}
             />
             <YAxis 
-              stroke="#6b7280"
+              stroke={chartColors.axis}
               style={{ fontSize: '12px' }}
               tickFormatter={formatYAxis}
             />
@@ -219,17 +228,17 @@ export default function MonthlyTrendChart({ expenses, budgets }: MonthlyTrendCha
       {/* Secondary Chart: Budget vs Actual (if budgets exist) */}
       {hasMultipleBudgets && (
         <div>
-          <h3 className="text-sm sm:text-base font-medium text-gray-700 mb-3">Budget vs Actual Spending</h3>
+          <h3 className="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300 mb-3">Budget vs Actual Spending</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={monthlyData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
               <XAxis 
                 dataKey="month" 
-                stroke="#6b7280"
+                stroke={chartColors.axis}
                 style={{ fontSize: '12px' }}
               />
               <YAxis 
-                stroke="#6b7280"
+                stroke={chartColors.axis}
                 style={{ fontSize: '12px' }}
                 tickFormatter={formatYAxis}
               />

@@ -17,7 +17,7 @@ interface MonthlySummaryProps {
 
 function MonthlySummarySkeleton() {
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 sticky top-4 sm:top-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 sticky top-4 sm:top-6">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <ShimmerLoader width="180px" height="28px" className="sm:h-8" />
         <ShimmerLoader width="80px" height="16px" className="sm:h-5" />
@@ -25,12 +25,12 @@ function MonthlySummarySkeleton() {
 
       <div className="space-y-3 sm:space-y-4">
         {/* Budget Section Skeleton */}
-        <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
+        <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
           <div className="flex justify-between items-center mb-2">
             <ShimmerLoader width="100px" height="14px" className="sm:h-4" />
             <ShimmerLoader width="80px" height="20px" className="sm:h-6 sm:w-32" />
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-3 mb-2">
+          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 sm:h-3 mb-2">
             <ShimmerLoader width="60%" height="100%" rounded="full" />
           </div>
           <div className="flex justify-between items-center">
@@ -40,12 +40,12 @@ function MonthlySummarySkeleton() {
         </div>
 
         {/* Summary Cards Skeleton */}
-        <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
+        <div className="p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
           <ShimmerLoader width="120px" height="14px" className="sm:h-4 mb-1" />
           <ShimmerLoader width="100px" height="24px" className="sm:h-8 sm:w-40 mt-2" />
         </div>
 
-        <div className="p-3 sm:p-4 bg-purple-50 rounded-lg">
+        <div className="p-3 sm:p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
           <ShimmerLoader width="110px" height="14px" className="sm:h-4 mb-1" />
           <ShimmerLoader width="100px" height="24px" className="sm:h-8 sm:w-40 mt-2" />
           <div className="mt-2 space-y-1">
@@ -54,13 +54,13 @@ function MonthlySummarySkeleton() {
           </div>
         </div>
 
-        <div className="p-3 sm:p-4 bg-green-50 rounded-lg">
+        <div className="p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
           <ShimmerLoader width="160px" height="14px" className="sm:h-4 mb-1" />
           <ShimmerLoader width="100px" height="24px" className="sm:h-8 sm:w-40 mt-2" />
         </div>
 
         {/* Payment Mode Section Skeleton */}
-        <div className="pt-4 border-t border-gray-200">
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
           <ShimmerLoader width="120px" height="16px" className="sm:h-5 mb-3" />
           <div className="space-y-2">
             {[...Array(4)].map((_, index) => (
@@ -73,7 +73,7 @@ function MonthlySummarySkeleton() {
         </div>
 
         {/* Quick Stats Section Skeleton */}
-        <div className="pt-4 border-t border-gray-200">
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
           <ShimmerLoader width="100px" height="16px" className="sm:h-5 mb-3" />
           <div className="space-y-2">
             {[...Array(3)].map((_, index) => (
@@ -154,14 +154,14 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
   const budgetColor = getBudgetColor();
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 sticky top-4 sm:top-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 sticky top-4 sm:top-6">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
-        <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">
+        <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-gray-200">
           {format(currentMonth, 'MMMM yyyy')} Summary
         </h2>
         <button
           onClick={onSetBudget}
-          className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium"
+          className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
         >
           {budget ? 'Edit' : 'Set Budget'}
         </button>
@@ -171,38 +171,38 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
         {/* Budget Section */}
         {budgetAmount !== null ? (
           <div className={`p-3 sm:p-4 rounded-lg ${
-            budgetColor === 'green' ? 'bg-green-50' :
-            budgetColor === 'yellow' ? 'bg-yellow-50' :
-            budgetColor === 'red' ? 'bg-red-50' :
-            'bg-gray-50'
+            budgetColor === 'green' ? 'bg-green-50 dark:bg-green-900/20' :
+            budgetColor === 'yellow' ? 'bg-yellow-50 dark:bg-yellow-900/20' :
+            budgetColor === 'red' ? 'bg-red-50 dark:bg-red-900/20' :
+            'bg-gray-50 dark:bg-gray-700'
           }`}>
             <div className="flex justify-between items-center mb-2">
-              <div className="text-xs sm:text-sm text-gray-600">Monthly Budget</div>
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Monthly Budget</div>
               <div className={`text-lg sm:text-xl font-bold ${
-                budgetColor === 'green' ? 'text-green-900' :
-                budgetColor === 'yellow' ? 'text-yellow-900' :
-                budgetColor === 'red' ? 'text-red-900' :
-                'text-gray-900'
+                budgetColor === 'green' ? 'text-green-900 dark:text-green-300' :
+                budgetColor === 'yellow' ? 'text-yellow-900 dark:text-yellow-300' :
+                budgetColor === 'red' ? 'text-red-900 dark:text-red-300' :
+                'text-gray-900 dark:text-gray-100'
               }`}>
                 ₹{formatNumber(budgetAmount)}
               </div>
             </div>
             
             {/* Progress Bar */}
-            <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-3 mb-2">
+            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 sm:h-3 mb-2">
               <div
                 className={`h-2.5 sm:h-3 rounded-full transition-all ${
-                  budgetColor === 'green' ? 'bg-green-600' :
-                  budgetColor === 'yellow' ? 'bg-yellow-500' :
-                  budgetColor === 'red' ? 'bg-red-600' :
-                  'bg-gray-400'
+                  budgetColor === 'green' ? 'bg-green-600 dark:bg-green-500' :
+                  budgetColor === 'yellow' ? 'bg-yellow-500 dark:bg-yellow-400' :
+                  budgetColor === 'red' ? 'bg-red-600 dark:bg-red-500' :
+                  'bg-gray-400 dark:bg-gray-500'
                 }`}
                 style={{ width: `${budgetPercentageForBar || 0}%` }}
               />
             </div>
             
             <div className="flex justify-between items-center text-xs sm:text-sm">
-              <span className="text-gray-600">
+              <span className="text-gray-600 dark:text-gray-400">
                 Spent: ₹{formatNumber(actualSpending)}
                 {budgetPercentage !== null && (
                   <span className="ml-1">({budgetPercentage.toFixed(1)}%)</span>
@@ -210,9 +210,9 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
               </span>
               {remainingBudget !== null && (
                 <span className={`font-semibold text-right ${
-                  remainingBudget < 0 ? 'text-red-700' :
-                  budgetColor === 'yellow' ? 'text-yellow-700' :
-                  'text-green-700'
+                  remainingBudget < 0 ? 'text-red-700 dark:text-red-400' :
+                  budgetColor === 'yellow' ? 'text-yellow-700 dark:text-yellow-400' :
+                  'text-green-700 dark:text-green-400'
                 }`}>
                   {remainingBudget >= 0 
                     ? `Remaining: ₹${formatNumber(remainingBudget)}`
@@ -223,66 +223,66 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
             </div>
           </div>
         ) : (
-          <div className="p-3 sm:p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 text-center">
-            <div className="text-xs sm:text-sm text-gray-600 mb-2">No budget set for this month</div>
+          <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-center">
+            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2">No budget set for this month</div>
             <button
               onClick={onSetBudget}
-              className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium"
+              className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
             >
               Set Budget
             </button>
           </div>
         )}
-        <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
-          <div className="text-xs sm:text-sm text-gray-600 mb-1">Total Spent by Me</div>
-          <div className="text-xl sm:text-2xl font-bold text-blue-900">₹{formatNumber(totalSpentByMe)}</div>
+        <div className="p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Total Spent by Me</div>
+          <div className="text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-300">₹{formatNumber(totalSpentByMe)}</div>
         </div>
 
-        <div className="p-3 sm:p-4 bg-purple-50 rounded-lg">
-          <div className="text-xs sm:text-sm text-gray-600 mb-1">Spent for Others</div>
-          <div className="text-xl sm:text-2xl font-bold text-purple-900">₹{formatNumber(totalSpentForOthers)}</div>
-          <div className="mt-2 text-xs text-gray-600">
+        <div className="p-3 sm:p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Spent for Others</div>
+          <div className="text-xl sm:text-2xl font-bold text-purple-900 dark:text-purple-300">₹{formatNumber(totalSpentForOthers)}</div>
+          <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
             <div>Received: ₹{formatNumber(totalReceived)}</div>
             <div>Pending: ₹{formatNumber(totalPending)}</div>
           </div>
         </div>
 
-        <div className="p-3 sm:p-4 bg-yellow-50 rounded-lg">
-          <div className="text-xs sm:text-sm text-gray-600 mb-1">Money Received</div>
-          <div className="text-xl sm:text-2xl font-bold text-yellow-900">₹{formatNumber(totalIncome)}</div>
+        <div className="p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Money Received</div>
+          <div className="text-xl sm:text-2xl font-bold text-yellow-900 dark:text-yellow-300">₹{formatNumber(totalIncome)}</div>
         </div>
 
-        <div className="p-3 sm:p-4 bg-green-50 rounded-lg">
-          <div className="text-xs sm:text-sm text-gray-600 mb-1">Net Amount (Me + Pending - Income)</div>
-          <div className="text-xl sm:text-2xl font-bold text-green-900">₹{formatNumber(netAmount)}</div>
+        <div className="p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Net Amount (Me + Pending - Income)</div>
+          <div className="text-xl sm:text-2xl font-bold text-green-900 dark:text-green-300">₹{formatNumber(netAmount)}</div>
         </div>
 
-        <div className="pt-4 border-t border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">By Payment Mode</h3>
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">By Payment Mode</h3>
           <div className="space-y-2">
             {Object.entries(paymentModeTotals).map(([mode, amount]) => (
               <div key={mode} className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">{mode}</span>
-                <span className="text-sm font-semibold text-gray-900">₹{formatNumber(amount)}</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{mode}</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">₹{formatNumber(amount)}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="pt-4 border-t border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Stats</h3>
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Quick Stats</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">Total Expenses</span>
-              <span className="font-semibold text-gray-900">{monthExpenses.length}</span>
+              <span className="text-gray-600 dark:text-gray-400">Total Expenses</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{monthExpenses.length}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Self Expenses</span>
-              <span className="font-semibold text-gray-900">{selfExpenses.length}</span>
+              <span className="text-gray-600 dark:text-gray-400">Self Expenses</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{selfExpenses.length}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Other Expenses</span>
-              <span className="font-semibold text-gray-900">{otherExpenses.length}</span>
+              <span className="text-gray-600 dark:text-gray-400">Other Expenses</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{otherExpenses.length}</span>
             </div>
           </div>
         </div>

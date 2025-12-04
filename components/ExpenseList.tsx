@@ -1,13 +1,16 @@
 'use client';
 
 import { Expense } from '@/types/expense';
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { Pencil, Trash2, Plus, Filter, Search } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 import ShimmerLoader from './ShimmerLoader';
 
 interface ExpenseListProps {
   expenses: Expense[];
+  allExpenses: Expense[];
+  currentMonth: Date;
+  onMonthChange: (month: Date) => void;
   onEdit: (expense: Expense) => void;
   onDelete: (id: string) => void;
   onMarkPaymentReceived: (id: string, received: boolean) => void;
@@ -21,9 +24,9 @@ interface ExpenseListProps {
 
 function ExpenseListSkeleton() {
   const headerContent = (
-    <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+    <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
       <div className="flex flex-row justify-between items-center gap-2 sm:gap-0">
-        <ShimmerLoader width="120px" height="28px" className="sm:h-8" />
+        <ShimmerLoader width="150px" height="28px" className="sm:h-8" />
         <div className="flex gap-2 sm:gap-3 flex-shrink-0">
           <ShimmerLoader width="60px" height="32px" className="sm:w-24" rounded="md" />
           <ShimmerLoader width="80px" height="32px" className="sm:w-32" rounded="md" />
@@ -33,38 +36,38 @@ function ExpenseListSkeleton() {
   );
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
       {headerContent}
       <div className="overflow-x-auto w-full">
-        <table className="w-full divide-y divide-gray-200" style={{ minWidth: '640px' }}>
-          <thead className="bg-gray-50">
+        <table className="w-full divide-y divide-gray-200 dark:divide-gray-700" style={{ minWidth: '640px' }}>
+          <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Date
               </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Title
               </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Amount
               </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">
                 Payment Mode
               </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 For/From Whom
               </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">
                 Payment Status
               </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {[...Array(6)].map((_, index) => (
-              <tr key={index} className="hover:bg-gray-50">
+              <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                 <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap">
                   <ShimmerLoader width="90px" height="16px" className="sm:h-5" />
                 </td>
@@ -94,7 +97,7 @@ function ExpenseListSkeleton() {
           </tbody>
         </table>
       </div>
-      <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50">
+      <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
         <div className="flex justify-between items-center">
           <ShimmerLoader width="100px" height="16px" className="sm:h-5" />
           <ShimmerLoader width="80px" height="20px" className="sm:h-6 sm:w-32" />
@@ -104,19 +107,68 @@ function ExpenseListSkeleton() {
   );
 }
 
-export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentReceived, onOpenFilterModal, onOpenAddModal, isLoading = false, hasActiveFilters = false, totalExpensesCount = 0, onClearFilters }: ExpenseListProps) {
+export default function ExpenseList({ expenses, allExpenses, currentMonth, onMonthChange, onEdit, onDelete, onMarkPaymentReceived, onOpenFilterModal, onOpenAddModal, isLoading = false, hasActiveFilters = false, totalExpensesCount = 0, onClearFilters }: ExpenseListProps) {
   if (isLoading) {
     return <ExpenseListSkeleton />;
   }
 
+  // Get unique months from expenses
+  const getAvailableMonths = () => {
+    const monthSet = new Set<string>();
+    const now = new Date();
+    const currentMonthKey = format(startOfMonth(now), 'yyyy-MM');
+    monthSet.add(currentMonthKey);
+
+    // Add months that have expenses
+    allExpenses.forEach((expense) => {
+      const monthKey = format(startOfMonth(expense.date), 'yyyy-MM');
+      monthSet.add(monthKey);
+    });
+
+    // Convert to array and sort descending (most recent first)
+    const months = Array.from(monthSet)
+      .map((key) => {
+        const [year, month] = key.split('-').map(Number);
+        return new Date(year, month - 1, 1);
+      })
+      .sort((a, b) => b.getTime() - a.getTime());
+
+    return months;
+  };
+
+  const availableMonths = getAvailableMonths();
+
+  const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedDate = new Date(e.target.value);
+    onMonthChange(selectedDate);
+  };
+
   const headerContent = (
-    <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+    <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
       <div className="flex flex-row justify-between items-center gap-2 sm:gap-0">
-        <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 flex-shrink-0">Expenses</h2>
+        <div className="relative flex-shrink-0">
+          <select
+            value={format(startOfMonth(currentMonth), 'yyyy-MM')}
+            onChange={handleMonthChange}
+            className="text-base sm:text-xl font-semibold text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md outline-none cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors px-2 sm:px-3 py-1.5 sm:py-2 pr-8 sm:pr-10 appearance-none"
+            aria-label="Select month"
+          >
+            {availableMonths.map((month) => (
+              <option key={format(month, 'yyyy-MM')} value={format(month, 'yyyy-MM')}>
+                {format(month, 'MMMM yyyy')}
+              </option>
+            ))}
+          </select>
+          <div className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
         <div className="flex gap-2 sm:gap-3 flex-shrink-0">
           <button
             onClick={onOpenFilterModal}
-            className="flex items-center justify-center gap-1.5 sm:gap-2 bg-gray-600 text-white px-2.5 sm:px-3.5 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors text-xs sm:text-sm whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 sm:gap-2 bg-gray-600 dark:bg-gray-700 text-white px-2.5 sm:px-3.5 py-2 rounded-md hover:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors text-xs sm:text-sm whitespace-nowrap"
             aria-label="Filters"
           >
             <Filter size={16} />
@@ -140,25 +192,25 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
     const hasAnyExpenses = (totalExpensesCount ?? 0) > 0;
 
     return (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
         {headerContent}
         <div className="py-12 sm:py-16 px-4 text-center">
           {hasFilters && hasAnyExpenses ? (
             <>
               <Search 
-                className="w-16 h-16 sm:w-20 sm:h-20 text-gray-400 mx-auto mb-4" 
+                className="w-16 h-16 sm:w-20 sm:h-20 text-gray-400 dark:text-gray-500 mx-auto mb-4" 
                 aria-hidden="true"
               />
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 No expenses match your filters
               </h3>
-              <p className="text-sm sm:text-base text-gray-600 mb-6 max-w-md mx-auto">
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
                 Try adjusting your filters or select a different month to see more expenses.
               </p>
               {onClearFilters && (
                 <button
                   onClick={onClearFilters}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
                 >
                   Clear Filters
                 </button>
@@ -172,10 +224,10 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
                 className="w-24 h-24 sm:w-36 sm:h-36 mx-auto mb-4" 
                 aria-hidden="true"
               />
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 No expenses yet
               </h3>
-              <p className="text-sm sm:text-base text-gray-600 mb-6 max-w-md mx-auto">
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
                 Start tracking your expenses by adding your first expense entry.
               </p>
               <button
@@ -193,62 +245,62 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
       {headerContent}
       <div className="overflow-x-auto w-full">
-        <table className="w-full divide-y divide-gray-200" style={{ minWidth: '640px' }}>
-          <thead className="bg-gray-50">
+        <table className="w-full divide-y divide-gray-200 dark:divide-gray-700" style={{ minWidth: '640px' }}>
+          <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Date
               </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Title
               </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Amount
               </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">
                 Payment Mode
               </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 For/From Whom
               </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">
                 Payment Status
               </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {expenses.map((expense) => (
-              <tr key={expense.id} className="hover:bg-gray-50">
-                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-900">
+              <tr key={expense.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-gray-100">
                   {format(expense.date, 'MMM dd, yyyy')}
                 </td>
-                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 max-w-[120px] sm:max-w-none truncate sm:truncate-none">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100 max-w-[120px] sm:max-w-none truncate sm:truncate-none">
                   {expense.title}
                 </td>
-                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900 dark:text-gray-100">
                   ₹{formatNumber(expense.amount)}
                 </td>
-                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 hidden md:table-cell">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
                   {expense.paymentMode}
                 </td>
-                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                   {expense.forWhom === 'Self' ? (
-                    <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                       Self
                     </span>
                   ) : (
-                    <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                       {expense.forWhom}
                     </span>
                   )}
                   {(expense.transactionType || 'expense') === 'income' && (
-                    <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                    <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
                       Income
                     </span>
                   )}
@@ -260,21 +312,21 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
                         type="checkbox"
                         checked={expense.paymentReceived || false}
                         onChange={(e) => onMarkPaymentReceived(expense.id, e.target.checked)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
                       />
-                      <span className="ml-2 text-gray-700">
+                      <span className="ml-2 text-gray-700 dark:text-gray-300">
                         {expense.paymentReceived ? 'Received' : 'Pending'}
                       </span>
                     </label>
                   ) : (
-                    <span className="text-gray-400">—</span>
+                    <span className="text-gray-400 dark:text-gray-500">—</span>
                   )}
                 </td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-right text-xs sm:text-sm font-medium">
                   <div className="flex justify-end gap-1 sm:gap-2">
                     <button
                       onClick={() => onEdit(expense)}
-                      className="text-blue-600 hover:text-blue-900 focus:outline-none p-1 rounded hover:bg-blue-50 transition-colors"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 focus:outline-none p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
                       title="Edit"
                       aria-label="Edit expense"
                     >
@@ -286,7 +338,7 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
                           onDelete(expense.id);
                         }
                       }}
-                      className="text-red-600 hover:text-red-900 focus:outline-none p-1 rounded hover:bg-red-50 transition-colors"
+                      className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 focus:outline-none p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                       title="Delete"
                       aria-label="Delete expense"
                     >
@@ -299,10 +351,10 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onMarkPaymentR
           </tbody>
         </table>
       </div>
-      <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50">
+      <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
         <div className="flex justify-between items-center">
-          <span className="text-xs sm:text-sm text-gray-600">Total:</span>
-          <span className="text-base sm:text-lg font-semibold text-gray-900">
+          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total:</span>
+          <span className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">
             ₹{formatNumber(
               expenses.filter((e) => (e.transactionType || 'expense') === 'expense').reduce((sum, e) => sum + e.amount, 0) -
               expenses.filter((e) => e.transactionType === 'income').reduce((sum, e) => sum + e.amount, 0)

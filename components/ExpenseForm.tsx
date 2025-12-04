@@ -207,19 +207,19 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 backdrop-blur-sm"
         onClick={onClose}
       />
       
       {/* Modal */}
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto m-2 sm:m-0">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10">
-          <h2 className="text-lg sm:text-2xl font-semibold text-gray-800 pr-2">
+      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto m-2 sm:m-0">
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10">
+          <h2 className="text-lg sm:text-2xl font-semibold text-gray-800 dark:text-gray-200 pr-2">
             {editingExpense ? 'Edit Transaction' : 'Add New Transaction'}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1 transition-colors flex-shrink-0"
+            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1 transition-colors flex-shrink-0"
             aria-label="Close"
           >
             <X size={20} />
@@ -229,7 +229,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
         <div className="p-4 sm:p-6">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Transaction Type *
           </label>
           <div className="flex gap-4">
@@ -242,9 +242,9 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
                 onChange={(e) => {
                   setTransactionType(e.target.value as TransactionType);
                 }}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 dark:bg-gray-700"
               />
-              <span className="ml-2 text-sm text-gray-700">Expense</span>
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Expense</span>
             </label>
             <label className="flex items-center">
               <input
@@ -256,15 +256,15 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
                   setTransactionType(e.target.value as TransactionType);
                   setPaymentReceived(false);
                 }}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 dark:bg-gray-700"
               />
-              <span className="ml-2 text-sm text-gray-700">Income</span>
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Income</span>
             </label>
           </div>
         </div>
 
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {transactionType === 'income' ? 'Income Title' : 'Expense Title'} *
           </label>
           <input
@@ -272,14 +272,14 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="e.g., Electricity Bill"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Amount *
           </label>
           <input
@@ -288,21 +288,21 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="0.00"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="paymentMode" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="paymentMode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Payment Mode *
           </label>
           <select
             id="paymentMode"
             value={paymentMode}
             onChange={(e) => setPaymentMode(e.target.value as PaymentMode)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           >
             {paymentModes.map((mode) => (
@@ -314,7 +314,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
         </div>
 
         <div className="for-whom-autocomplete relative">
-          <label htmlFor="forWhom" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="forWhom" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {transactionType === 'income' ? 'From Whom' : 'For Whom'} *
           </label>
           <input
@@ -324,26 +324,26 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
             onChange={(e) => handleForWhomChange(e.target.value)}
             onFocus={handleForWhomFocus}
             onKeyDown={handleKeyDown}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder={transactionType === 'income' ? "Person's name" : "Self or person's name"}
             required
             autoComplete="off"
           />
           {showSuggestions && filteredSuggestions.length > 0 && (
-            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+            <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
               {filteredSuggestions.map((suggestion, index) => (
                 <button
                   key={suggestion}
                   type="button"
                   onClick={() => handleSelectSuggestion(suggestion)}
-                  className={`w-full text-left px-3 py-2 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none transition-colors ${
-                    index === highlightedIndex ? 'bg-blue-50' : 'bg-white'
+                  className={`w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 focus:bg-blue-50 dark:focus:bg-blue-900/30 focus:outline-none transition-colors ${
+                    index === highlightedIndex ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-white dark:bg-gray-800'
                   }`}
                   onMouseEnter={() => setHighlightedIndex(index)}
                 >
-                  <span className="text-sm text-gray-900">
+                  <span className="text-sm text-gray-900 dark:text-gray-100">
                     {suggestion === 'Self' ? (
-                      <span className="font-medium text-green-700">{suggestion}</span>
+                      <span className="font-medium text-green-700 dark:text-green-400">{suggestion}</span>
                     ) : (
                       suggestion
                     )}
@@ -355,7 +355,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
         </div>
 
         <div>
-          <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Date *
           </label>
           <input
@@ -363,7 +363,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
             id="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
         </div>
@@ -375,9 +375,9 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
               id="paymentReceived"
               checked={paymentReceived}
               onChange={(e) => setPaymentReceived(e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
             />
-            <label htmlFor="paymentReceived" className="ml-2 block text-sm text-gray-700">
+            <label htmlFor="paymentReceived" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
               Payment received from {forWhom}
             </label>
           </div>
@@ -394,7 +394,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
             <button
               type="button"
               onClick={handleCancel}
-              className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+              className="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
             >
               Cancel
             </button>
