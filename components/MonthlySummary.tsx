@@ -247,10 +247,12 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
           </div>
         </div>
 
-        <div className="p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Money Received</div>
-          <div className="text-xl sm:text-2xl font-bold text-yellow-900 dark:text-yellow-300">₹{formatNumber(totalIncome)}</div>
-        </div>
+        {incomeTransactions.length > 0 && (
+          <div className="p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Money Received</div>
+            <div className="text-xl sm:text-2xl font-bold text-yellow-900 dark:text-yellow-300">₹{formatNumber(totalIncome)}</div>
+          </div>
+        )}
 
         <div className="p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
           <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Net Amount (Me + Pending - Income)</div>
