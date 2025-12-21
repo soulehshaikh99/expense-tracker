@@ -101,9 +101,11 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
     isWithinInterval(expense.date, { start: monthStart, end: monthEnd })
   );
 
-  // Separate expenses and income
+  // Separate expenses, income, and donations
   const expenseTransactions = monthExpenses.filter((e) => (e.transactionType || 'expense') === 'expense');
   const incomeTransactions = monthExpenses.filter((e) => e.transactionType === 'income');
+  const donationTransactions = monthExpenses.filter((e) => e.transactionType === 'donation');
+  const totalDonations = donationTransactions.reduce((sum, e) => sum + e.amount, 0);
 
   const selfExpenses = expenseTransactions.filter((e) => e.forWhom === 'Self');
   const otherExpenses = expenseTransactions.filter((e) => e.forWhom !== 'Self');
@@ -123,7 +125,7 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
     Cash: 0,
   };
 
-  // Only count expenses in payment mode totals (not income)
+  // Only count expenses in payment mode totals (not income or donations)
   expenseTransactions.forEach((expense) => {
     paymentModeTotals[expense.paymentMode] += expense.amount;
   });
@@ -251,6 +253,13 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
           <div className="p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
             <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Money Received</div>
             <div className="text-xl sm:text-2xl font-bold text-yellow-900 dark:text-yellow-300">₹{formatNumber(totalIncome)}</div>
+          </div>
+        )}
+
+        {donationTransactions.length > 0 && totalDonations > 0 && (
+          <div className="p-3 sm:p-4 bg-pink-50 dark:bg-pink-900/20 rounded-lg">
+            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Amount Donated</div>
+            <div className="text-xl sm:text-2xl font-bold text-pink-900 dark:text-pink-300">₹{formatNumber(totalDonations)}</div>
           </div>
         )}
 

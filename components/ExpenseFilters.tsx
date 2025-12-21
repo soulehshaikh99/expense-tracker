@@ -134,6 +134,7 @@ export default function ExpenseFilters({
             <option value="All">All</option>
             <option value="expense">Expense</option>
             <option value="income">Income</option>
+            <option value="donation">Donation</option>
           </select>
         </div>
 

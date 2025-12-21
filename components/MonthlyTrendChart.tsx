@@ -93,9 +93,10 @@ export default function MonthlyTrendChart({ expenses, budgets }: MonthlyTrendCha
   const monthlyData: MonthlyData[] = monthsWithData.map((monthKey) => {
     const monthExpenses = groupedExpenses.get(monthKey) || [];
     
-    // Separate expenses and income
+    // Separate expenses, income, and donations (donations excluded from calculations)
     const expenseTransactions = monthExpenses.filter((e) => (e.transactionType || 'expense') === 'expense');
     const incomeTransactions = monthExpenses.filter((e) => e.transactionType === 'income');
+    // Donations are filtered but not used in calculations
     
     const selfExpenses = expenseTransactions.filter((e) => e.forWhom === 'Self');
     const otherExpenses = expenseTransactions.filter((e) => e.forWhom !== 'Self');

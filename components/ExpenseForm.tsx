@@ -89,8 +89,8 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
       forWhom: normalizedForWhom,
       date: new Date(date),
       transactionType,
-      paymentReceived: transactionType === 'expense' && normalizedForWhom !== 'Self' ? paymentReceived : false,
-      paymentReceivedDate: transactionType === 'expense' && normalizedForWhom !== 'Self' && paymentReceived ? new Date() : undefined,
+      paymentReceived: (transactionType === 'expense' || transactionType === 'donation') && normalizedForWhom !== 'Self' ? paymentReceived : false,
+      paymentReceivedDate: (transactionType === 'expense' || transactionType === 'donation') && normalizedForWhom !== 'Self' && paymentReceived ? new Date() : undefined,
     };
 
     onSubmit(expenseData);
@@ -229,43 +229,30 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
         <div className="p-4 sm:p-6">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label htmlFor="transactionType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Transaction Type *
           </label>
-          <div className="flex gap-4">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="transactionType"
-                value="expense"
-                checked={transactionType === 'expense'}
-                onChange={(e) => {
-                  setTransactionType(e.target.value as TransactionType);
-                }}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 dark:bg-gray-700"
-              />
-              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Expense</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="transactionType"
-                value="income"
-                checked={transactionType === 'income'}
-                onChange={(e) => {
-                  setTransactionType(e.target.value as TransactionType);
-                  setPaymentReceived(false);
-                }}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 dark:bg-gray-700"
-              />
-              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Income</span>
-            </label>
-          </div>
+          <select
+            id="transactionType"
+            value={transactionType}
+            onChange={(e) => {
+              setTransactionType(e.target.value as TransactionType);
+              if (e.target.value !== 'expense') {
+                setPaymentReceived(false);
+              }
+            }}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          >
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+            <option value="donation">Donation</option>
+          </select>
         </div>
 
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {transactionType === 'income' ? 'Income Title' : 'Expense Title'} *
+            {transactionType === 'income' ? 'Income Title' : transactionType === 'donation' ? 'Donation Title' : 'Expense Title'} *
           </label>
           <input
             type="text"
@@ -325,7 +312,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
             onFocus={handleForWhomFocus}
             onKeyDown={handleKeyDown}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder={transactionType === 'income' ? "Person's name" : "Self or person's name"}
+            placeholder={transactionType === 'income' ? "Person's name" : transactionType === 'donation' ? "Self, organization or person's name" : "Self or person's name"}
             required
             autoComplete="off"
           />
@@ -368,7 +355,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
           />
         </div>
 
-        {transactionType === 'expense' && forWhom !== 'Self' && (
+        {(transactionType === 'expense' || transactionType === 'donation') && forWhom !== 'Self' && (
           <div className="flex items-center">
             <input
               type="checkbox"

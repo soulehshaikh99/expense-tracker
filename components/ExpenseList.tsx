@@ -373,11 +373,16 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
                         Income
                       </span>
                     )}
+                    {expense.transactionType === 'donation' && (
+                      <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-300">
+                        Donation
+                      </span>
+                    )}
                   </td>
                 )}
                 {columnVisibility.paymentStatus && (
                   <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm hidden lg:table-cell">
-                    {(expense.transactionType || 'expense') === 'expense' && expense.forWhom !== 'Self' ? (
+                    {((expense.transactionType || 'expense') === 'expense' || expense.transactionType === 'donation') && expense.forWhom !== 'Self' ? (
                       <label className="flex items-center">
                         <input
                           type="checkbox"
@@ -430,6 +435,7 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
             ₹{formatNumber(
               expenses.filter((e) => (e.transactionType || 'expense') === 'expense').reduce((sum, e) => sum + e.amount, 0) -
               expenses.filter((e) => e.transactionType === 'income').reduce((sum, e) => sum + e.amount, 0)
+              // Donations are excluded from totals
             )}
           </span>
         </div>
