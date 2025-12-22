@@ -11,7 +11,6 @@ import ExpenseList from '@/components/ExpenseList';
 import ExpenseFilters from '@/components/ExpenseFilters';
 import MonthlySummary from '@/components/MonthlySummary';
 import BudgetForm from '@/components/BudgetForm';
-import MonthlyTrendChart from '@/components/MonthlyTrendChart';
 import ThemeToggle from '@/components/ThemeToggle';
 // import FirebaseStatus from '@/components/FirebaseStatus';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
@@ -435,11 +434,6 @@ export default function Home() {
               isLoading={isLoadingExpenses || isLoadingBudgets}
             />
           </div>
-        </div>
-
-        {/* Monthly Trend Chart - Shows when 2+ months of data exist */}
-        <div className="mt-4 sm:mt-6">
-          <MonthlyTrendChart expenses={expenses} budgets={budgets} />
         </div>
 
         <ExpenseForm
