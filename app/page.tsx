@@ -25,6 +25,7 @@ export default function Home() {
   const [selectedPaymentMode, setSelectedPaymentMode] = useState<PaymentMode[] | 'All'>('All');
   const [selectedForWhom, setSelectedForWhom] = useState<string[] | 'All'>('All');
   const [selectedTransactionType, setSelectedTransactionType] = useState<TransactionType[] | 'All'>('All');
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<'All' | 'Received' | 'Pending'>('All');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -42,7 +43,7 @@ export default function Home() {
   useEffect(() => {
     applyFilters();
     updateCurrentBudget();
-  }, [expenses, selectedPaymentMode, selectedForWhom, selectedTransactionType, currentMonth, budgets]);
+  }, [expenses, selectedPaymentMode, selectedForWhom, selectedTransactionType, selectedPaymentStatus, currentMonth, budgets]);
 
   const fetchExpenses = async () => {
     try {
@@ -119,6 +120,29 @@ export default function Home() {
     // Filter by for whom
     if (selectedForWhom !== 'All') {
       filtered = filtered.filter((expense) => selectedForWhom.includes(expense.forWhom));
+    }
+
+    // Filter by payment status (only applies to expenses for others and lent transactions, excludes donations)
+    if (selectedPaymentStatus !== 'All') {
+      filtered = filtered.filter((expense) => {
+        // Only filter if this expense can have a payment status (exclude donations)
+        const canHavePaymentStatus = 
+          (expense.transactionType === 'expense' && expense.forWhom !== 'Self') ||
+          expense.transactionType === 'lent';
+        
+        // If payment status is not applicable, exclude it when filtering by status
+        if (!canHavePaymentStatus) {
+          return false; // Exclude expenses that don't have payment status when filtering
+        }
+        
+        // Match the selected payment status
+        if (selectedPaymentStatus === 'Received') {
+          return expense.paymentReceived === true;
+        } else if (selectedPaymentStatus === 'Pending') {
+          return expense.paymentReceived === false;
+        }
+        return true;
+      });
     }
 
     setFilteredExpenses(filtered);
@@ -226,6 +250,7 @@ export default function Home() {
     setSelectedPaymentMode('All');
     setSelectedForWhom('All');
     setSelectedTransactionType('All');
+    setSelectedPaymentStatus('All');
     setCurrentMonth(new Date());
     setIsFilterModalOpen(false);
   };
@@ -234,6 +259,7 @@ export default function Home() {
   const hasActiveFilters = selectedPaymentMode !== 'All' || 
                           selectedForWhom !== 'All' ||
                           selectedTransactionType !== 'All' ||
+                          selectedPaymentStatus !== 'All' ||
                           (currentMonth.getMonth() !== new Date().getMonth() || 
                            currentMonth.getFullYear() !== new Date().getFullYear());
 
@@ -452,11 +478,13 @@ export default function Home() {
           selectedPaymentMode={selectedPaymentMode}
           selectedForWhom={selectedForWhom}
           selectedTransactionType={selectedTransactionType}
+          selectedPaymentStatus={selectedPaymentStatus}
           forWhomOptions={getUniqueForWhomValues()}
           currentMonth={currentMonth}
           onPaymentModeChange={setSelectedPaymentMode}
           onForWhomChange={setSelectedForWhom}
           onTransactionTypeChange={setSelectedTransactionType}
+          onPaymentStatusChange={setSelectedPaymentStatus}
           onMonthChange={setCurrentMonth}
           isOpen={isFilterModalOpen}
           onClose={handleCloseFilterModal}
