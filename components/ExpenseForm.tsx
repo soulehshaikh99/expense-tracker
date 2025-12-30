@@ -82,6 +82,12 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
     // Normalize "self" to "Self" (case-insensitive)
     const normalizedForWhom = forWhom.trim().toLowerCase() === 'self' ? 'Self' : forWhom.trim();
     
+    // Validate: lent transactions cannot be for "Self"
+    if (transactionType === 'lent' && normalizedForWhom === 'Self') {
+      alert('Money Lent transactions cannot be for "Self". Please enter a person\'s name.');
+      return;
+    }
+    
     const expenseData: Omit<Expense, 'id'> = {
       title: title.trim(),
       amount: parseFloat(amount),
@@ -89,8 +95,8 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
       forWhom: normalizedForWhom,
       date: new Date(date),
       transactionType,
-      paymentReceived: (transactionType === 'expense' || transactionType === 'donation') && normalizedForWhom !== 'Self' ? paymentReceived : false,
-      paymentReceivedDate: (transactionType === 'expense' || transactionType === 'donation') && normalizedForWhom !== 'Self' && paymentReceived ? new Date() : undefined,
+      paymentReceived: (transactionType === 'expense' || transactionType === 'donation' || transactionType === 'lent') && normalizedForWhom !== 'Self' ? paymentReceived : false,
+      paymentReceivedDate: (transactionType === 'expense' || transactionType === 'donation' || transactionType === 'lent') && normalizedForWhom !== 'Self' && paymentReceived ? new Date() : undefined,
     };
 
     onSubmit(expenseData);
@@ -134,6 +140,14 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
     return matching;
   })();
 
+  // Filter out "Self" from suggestions when transaction type is 'lent'
+  const getFilteredSuggestionsForLent = () => {
+    if (transactionType !== 'lent') {
+      return filteredSuggestions;
+    }
+    return filteredSuggestions.filter(suggestion => suggestion !== 'Self');
+  };
+
   const handleForWhomChange = (value: string) => {
     setForWhom(value);
     setShowSuggestions(true);
@@ -151,7 +165,8 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showSuggestions || filteredSuggestions.length === 0) {
+    const suggestions = getFilteredSuggestionsForLent();
+    if (!showSuggestions || suggestions.length === 0) {
       if (e.key === 'Enter') {
         e.preventDefault();
         return;
@@ -163,7 +178,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
       case 'ArrowDown':
         e.preventDefault();
         setHighlightedIndex(prev =>
-          prev < filteredSuggestions.length - 1 ? prev + 1 : prev
+          prev < suggestions.length - 1 ? prev + 1 : prev
         );
         break;
       case 'ArrowUp':
@@ -172,8 +187,8 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
         break;
       case 'Enter':
         e.preventDefault();
-        if (highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length) {
-          handleSelectSuggestion(filteredSuggestions[highlightedIndex]);
+        if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+          handleSelectSuggestion(suggestions[highlightedIndex]);
         }
         break;
       case 'Escape':
@@ -236,9 +251,14 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
             id="transactionType"
             value={transactionType}
             onChange={(e) => {
-              setTransactionType(e.target.value as TransactionType);
-              if (e.target.value !== 'expense') {
+              const newType = e.target.value as TransactionType;
+              setTransactionType(newType);
+              if (newType !== 'expense' && newType !== 'lent') {
                 setPaymentReceived(false);
+              }
+              // If switching to 'lent' and forWhom is 'Self', clear it
+              if (newType === 'lent' && forWhom === 'Self') {
+                setForWhom('');
               }
             }}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -247,12 +267,13 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
             <option value="expense">Expense</option>
             <option value="income">Income</option>
             <option value="donation">Donation</option>
+            <option value="lent">Money Lent</option>
           </select>
         </div>
 
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {transactionType === 'income' ? 'Income Title' : transactionType === 'donation' ? 'Donation Title' : 'Expense Title'} *
+            {transactionType === 'income' ? 'Income Title' : transactionType === 'donation' ? 'Donation Title' : transactionType === 'lent' ? 'Money Lent Title' : 'Expense Title'} *
           </label>
           <input
             type="text"
@@ -302,23 +323,30 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
 
         <div className="for-whom-autocomplete relative">
           <label htmlFor="forWhom" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {transactionType === 'income' ? 'From Whom' : 'For Whom'} *
+            {transactionType === 'income' ? 'From Whom' : transactionType === 'lent' ? 'To Whom' : 'For Whom'} *
           </label>
           <input
             type="text"
             id="forWhom"
             value={forWhom}
-            onChange={(e) => handleForWhomChange(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Prevent "Self" input for lent transactions
+              if (transactionType === 'lent' && value.trim().toLowerCase() === 'self') {
+                return;
+              }
+              handleForWhomChange(value);
+            }}
             onFocus={handleForWhomFocus}
             onKeyDown={handleKeyDown}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder={transactionType === 'income' ? "Person's name" : transactionType === 'donation' ? "Self, organization or person's name" : "Self or person's name"}
+            placeholder={transactionType === 'income' ? "Person's name" : transactionType === 'donation' ? "Self, organization or person's name" : transactionType === 'lent' ? "Person's name" : "Self or person's name"}
             required
             autoComplete="off"
           />
-          {showSuggestions && filteredSuggestions.length > 0 && (
+          {showSuggestions && getFilteredSuggestionsForLent().length > 0 && (
             <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
-              {filteredSuggestions.map((suggestion, index) => (
+              {getFilteredSuggestionsForLent().map((suggestion, index) => (
                 <button
                   key={suggestion}
                   type="button"
@@ -355,7 +383,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
           />
         </div>
 
-        {(transactionType === 'expense' || transactionType === 'donation') && forWhom !== 'Self' && (
+        {((transactionType === 'expense' || transactionType === 'donation' || transactionType === 'lent') && forWhom !== 'Self' && forWhom.trim() !== '') && (
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -365,7 +393,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
             />
             <label htmlFor="paymentReceived" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-              Payment received from {forWhom}
+              {transactionType === 'lent' ? `Money received back from ${forWhom}` : `Payment received from ${forWhom}`}
             </label>
           </div>
         )}

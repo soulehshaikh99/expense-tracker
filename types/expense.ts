@@ -1,5 +1,5 @@
 export type PaymentMode = 'Credit Card' | 'Debit Card' | 'UPI' | 'Cash';
-export type TransactionType = 'expense' | 'income' | 'donation';
+export type TransactionType = 'expense' | 'income' | 'donation' | 'lent';
 
 export interface Expense {
   id: string;

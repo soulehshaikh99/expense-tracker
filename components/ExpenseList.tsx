@@ -378,11 +378,16 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
                         Donation
                       </span>
                     )}
+                    {expense.transactionType === 'lent' && (
+                      <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300">
+                        Money Lent
+                      </span>
+                    )}
                   </td>
                 )}
                 {columnVisibility.paymentStatus && (
                   <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm hidden lg:table-cell">
-                    {((expense.transactionType || 'expense') === 'expense' || expense.transactionType === 'donation') && expense.forWhom !== 'Self' ? (
+                    {((expense.transactionType || 'expense') === 'expense' || expense.transactionType === 'donation' || expense.transactionType === 'lent') && expense.forWhom !== 'Self' ? (
                       <label className="flex items-center">
                         <input
                           type="checkbox"
@@ -433,9 +438,10 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
           <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total:</span>
           <span className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">
             ₹{formatNumber(
-              expenses.filter((e) => (e.transactionType || 'expense') === 'expense').reduce((sum, e) => sum + e.amount, 0) -
+              expenses.filter((e) => (e.transactionType || 'expense') === 'expense').reduce((sum, e) => sum + e.amount, 0) +
+              expenses.filter((e) => e.transactionType === 'lent').reduce((sum, e) => sum + e.amount, 0) -
               expenses.filter((e) => e.transactionType === 'income').reduce((sum, e) => sum + e.amount, 0)
-              // Donations are excluded from totals
+              // Donations are excluded from totals, lent is included like expenses
             )}
           </span>
         </div>

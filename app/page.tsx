@@ -22,9 +22,9 @@ export default function Home() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [selectedPaymentMode, setSelectedPaymentMode] = useState<PaymentMode | 'All'>('All');
-  const [selectedForWhom, setSelectedForWhom] = useState<string>('All');
-  const [selectedTransactionType, setSelectedTransactionType] = useState<TransactionType | 'All'>('All');
+  const [selectedPaymentMode, setSelectedPaymentMode] = useState<PaymentMode[] | 'All'>('All');
+  const [selectedForWhom, setSelectedForWhom] = useState<string[] | 'All'>('All');
+  const [selectedTransactionType, setSelectedTransactionType] = useState<TransactionType[] | 'All'>('All');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -106,17 +106,19 @@ export default function Home() {
 
     // Filter by transaction type
     if (selectedTransactionType !== 'All') {
-      filtered = filtered.filter((expense) => (expense.transactionType || 'expense') === selectedTransactionType);
+      filtered = filtered.filter((expense) => 
+        selectedTransactionType.includes(expense.transactionType || 'expense')
+      );
     }
 
     // Filter by payment mode
     if (selectedPaymentMode !== 'All') {
-      filtered = filtered.filter((expense) => expense.paymentMode === selectedPaymentMode);
+      filtered = filtered.filter((expense) => selectedPaymentMode.includes(expense.paymentMode));
     }
 
     // Filter by for whom
     if (selectedForWhom !== 'All') {
-      filtered = filtered.filter((expense) => expense.forWhom === selectedForWhom);
+      filtered = filtered.filter((expense) => selectedForWhom.includes(expense.forWhom));
     }
 
     setFilteredExpenses(filtered);
@@ -431,6 +433,7 @@ export default function Home() {
               onMonthChange={setCurrentMonth}
               budget={currentBudget}
               onSetBudget={handleOpenBudgetModal}
+              onMarkPaymentReceived={handleMarkPaymentReceived}
               isLoading={isLoadingExpenses || isLoadingBudgets}
             />
           </div>

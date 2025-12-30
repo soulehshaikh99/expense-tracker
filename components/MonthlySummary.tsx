@@ -1,10 +1,12 @@
 'use client';
 
-import { Expense, PaymentMode } from '@/types/expense';
+import { useState } from 'react';
+import { Expense, PaymentMode, TransactionType } from '@/types/expense';
 import { Budget } from '@/types/budget';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { formatNumber } from '@/lib/utils';
 import ShimmerLoader from './ShimmerLoader';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 interface MonthlySummaryProps {
   expenses: Expense[];
@@ -12,6 +14,7 @@ interface MonthlySummaryProps {
   onMonthChange: (month: Date) => void;
   budget: Budget | null;
   onSetBudget: () => void;
+  onMarkPaymentReceived?: (id: string, received: boolean) => void;
   isLoading?: boolean;
 }
 
@@ -59,37 +62,36 @@ function MonthlySummarySkeleton() {
           <ShimmerLoader width="100px" height="24px" className="sm:h-8 sm:w-40 mt-2" />
         </div>
 
-        {/* Payment Mode Section Skeleton */}
+        {/* Money to Collect Section Skeleton */}
         <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-          <ShimmerLoader width="120px" height="16px" className="sm:h-5 mb-3" />
-          <div className="space-y-2">
-            {[...Array(4)].map((_, index) => (
-              <div key={index} className="flex justify-between items-center">
-                <ShimmerLoader width="80px" height="14px" className="sm:h-4" />
-                <ShimmerLoader width="60px" height="14px" className="sm:h-4" />
+          <ShimmerLoader width="140px" height="16px" className="sm:h-5 mb-3" />
+          <div className="space-y-3">
+            {[...Array(2)].map((_, index) => (
+              <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div className="p-3 bg-gray-50 dark:bg-gray-700/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-1">
+                      <ShimmerLoader width="16px" height="16px" />
+                      <div className="flex-1">
+                        <ShimmerLoader width="100px" height="14px" className="sm:h-4 mb-1" />
+                        <ShimmerLoader width="80px" height="12px" className="sm:h-3" />
+                      </div>
+                    </div>
+                    <ShimmerLoader width="80px" height="16px" className="sm:h-5" />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Quick Stats Section Skeleton */}
-        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-          <ShimmerLoader width="100px" height="16px" className="sm:h-5 mb-3" />
-          <div className="space-y-2">
-            {[...Array(3)].map((_, index) => (
-              <div key={index} className="flex justify-between">
-                <ShimmerLoader width="100px" height="14px" className="sm:h-4" />
-                <ShimmerLoader width="30px" height="14px" className="sm:h-4" />
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );
 }
 
-export default function MonthlySummary({ expenses, currentMonth, onMonthChange, budget, onSetBudget, isLoading = false }: MonthlySummaryProps) {
+export default function MonthlySummary({ expenses, currentMonth, onMonthChange, budget, onSetBudget, onMarkPaymentReceived, isLoading = false }: MonthlySummaryProps) {
+  const [expandedPersons, setExpandedPersons] = useState<Set<string>>(new Set());
   if (isLoading) {
     return <MonthlySummarySkeleton />;
   }
@@ -101,10 +103,11 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
     isWithinInterval(expense.date, { start: monthStart, end: monthEnd })
   );
 
-  // Separate expenses, income, and donations
+  // Separate expenses, income, donations, and lent transactions
   const expenseTransactions = monthExpenses.filter((e) => (e.transactionType || 'expense') === 'expense');
   const incomeTransactions = monthExpenses.filter((e) => e.transactionType === 'income');
   const donationTransactions = monthExpenses.filter((e) => e.transactionType === 'donation');
+  const lentTransactions = monthExpenses.filter((e) => e.transactionType === 'lent');
   const totalDonations = donationTransactions.reduce((sum, e) => sum + e.amount, 0);
 
   const selfExpenses = expenseTransactions.filter((e) => e.forWhom === 'Self');
@@ -118,20 +121,86 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
   const totalPending = pendingExpenses.reduce((sum, e) => sum + e.amount, 0);
   const totalIncome = incomeTransactions.reduce((sum, e) => sum + e.amount, 0);
 
-  const paymentModeTotals: Record<PaymentMode, number> = {
-    'Credit Card': 0,
-    'Debit Card': 0,
-    UPI: 0,
-    Cash: 0,
+  // Calculate lent transaction totals
+  const totalLent = lentTransactions.reduce((sum, e) => sum + e.amount, 0);
+  const receivedLent = lentTransactions.filter((e) => e.paymentReceived).reduce((sum, e) => sum + e.amount, 0);
+  const pendingLent = lentTransactions.filter((e) => !e.paymentReceived).reduce((sum, e) => sum + e.amount, 0);
+
+  // Calculate money to collect from each person with transaction details
+  // Combine pending expenses, donations, and lent transactions
+  const pendingTransactionsByPerson: Record<string, Expense[]> = {};
+  
+  // Add pending expenses (expenses for others that haven't been paid)
+  pendingExpenses.forEach((expense) => {
+    const person = expense.forWhom;
+    if (!pendingTransactionsByPerson[person]) {
+      pendingTransactionsByPerson[person] = [];
+    }
+    pendingTransactionsByPerson[person].push(expense);
+  });
+  
+  // Add pending donations (donations for others that haven't been paid)
+  const pendingDonations = donationTransactions.filter((e) => e.forWhom !== 'Self' && !e.paymentReceived);
+  pendingDonations.forEach((expense) => {
+    const person = expense.forWhom;
+    if (!pendingTransactionsByPerson[person]) {
+      pendingTransactionsByPerson[person] = [];
+    }
+    pendingTransactionsByPerson[person].push(expense);
+  });
+  
+  // Add pending lent transactions
+  const pendingLentTransactions = lentTransactions.filter((e) => !e.paymentReceived);
+  pendingLentTransactions.forEach((expense) => {
+    const person = expense.forWhom;
+    if (!pendingTransactionsByPerson[person]) {
+      pendingTransactionsByPerson[person] = [];
+    }
+    pendingTransactionsByPerson[person].push(expense);
+  });
+  
+  // Calculate totals and sort by amount (descending)
+  const moneyToCollect = Object.entries(pendingTransactionsByPerson)
+    .map(([person, transactions]) => ({
+      person,
+      amount: transactions.reduce((sum, t) => sum + t.amount, 0),
+      transactions: transactions.sort((a, b) => b.date.getTime() - a.date.getTime()), // Sort by date, newest first
+      count: transactions.length,
+    }))
+    .sort((a, b) => b.amount - a.amount);
+
+  const togglePerson = (person: string) => {
+    setExpandedPersons((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(person)) {
+        newSet.delete(person);
+      } else {
+        newSet.add(person);
+      }
+      return newSet;
+    });
   };
 
-  // Only count expenses in payment mode totals (not income or donations)
-  expenseTransactions.forEach((expense) => {
-    paymentModeTotals[expense.paymentMode] += expense.amount;
-  });
+  const getTransactionTypeLabel = (type?: TransactionType): string => {
+    switch (type) {
+      case 'expense': return 'Expense';
+      case 'donation': return 'Donation';
+      case 'lent': return 'Lent';
+      default: return 'Expense';
+    }
+  };
 
-  // Net amount = expenses + pending - income (income reduces net spending)
-  const netAmount = totalSpentByMe + totalPending - totalIncome;
+  const getTransactionTypeColor = (type?: TransactionType): string => {
+    switch (type) {
+      case 'expense': return 'text-blue-600 dark:text-blue-400';
+      case 'donation': return 'text-pink-600 dark:text-pink-400';
+      case 'lent': return 'text-orange-600 dark:text-orange-400';
+      default: return 'text-gray-600 dark:text-gray-400';
+    }
+  };
+
+  // Net amount = expenses + pending + lent pending - income (income reduces net spending)
+  const netAmount = totalSpentByMe + totalPending + pendingLent - totalIncome;
 
   // Budget calculations
   const budgetAmount = budget?.amount || null;
@@ -263,40 +332,118 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
           </div>
         )}
 
+        {lentTransactions.length > 0 && totalLent > 0 && (
+          <div className="p-3 sm:p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Money Lent</div>
+            <div className="text-xl sm:text-2xl font-bold text-orange-900 dark:text-orange-300">₹{formatNumber(totalLent)}</div>
+            {totalLent > 0 && (
+              <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                <div>Received: ₹{formatNumber(receivedLent)}</div>
+                <div>Pending: ₹{formatNumber(pendingLent)}</div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Net Amount (Me + Pending - Income)</div>
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Net Amount (Me + Pending + Lent Pending - Income)</div>
           <div className="text-xl sm:text-2xl font-bold text-green-900 dark:text-green-300">₹{formatNumber(netAmount)}</div>
         </div>
 
         <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">By Payment Mode</h3>
-          <div className="space-y-2">
-            {Object.entries(paymentModeTotals).map(([mode, amount]) => (
-              <div key={mode} className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{mode}</span>
-                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">₹{formatNumber(amount)}</span>
-              </div>
-            ))}
-          </div>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Money to Collect</h3>
+          {moneyToCollect.length > 0 ? (
+            <div className="space-y-3">
+              {moneyToCollect.map(({ person, amount, transactions, count }) => {
+                const isExpanded = expandedPersons.has(person);
+                return (
+                  <div key={person} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                    {/* Person Header */}
+                    <div
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      onClick={() => togglePerson(person)}
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {isExpanded ? (
+                          <ChevronDown size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                        ) : (
+                          <ChevronRight size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                            {person === 'Self' ? 'Self' : person}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {count} {count === 1 ? 'transaction' : 'transactions'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-2">
+                        <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                          ₹{formatNumber(amount)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Transaction Details */}
+                    {isExpanded && (
+                      <div className="p-3 bg-white dark:bg-gray-800 space-y-2 border-t border-gray-200 dark:border-gray-700">
+                        {transactions.map((transaction) => (
+                          <div
+                            key={transaction.id}
+                            className="flex items-start justify-between gap-3 p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-xs font-medium ${getTransactionTypeColor(transaction.transactionType)}`}>
+                                  {getTransactionTypeLabel(transaction.transactionType)}
+                                </span>
+                                <span className="text-xs text-gray-400 dark:text-gray-500">•</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {format(transaction.date, 'MMM dd, yyyy')}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-900 dark:text-gray-100 font-medium truncate">
+                                {transaction.title}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {transaction.paymentMode}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              <div className="text-right">
+                                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                  ₹{formatNumber(transaction.amount)}
+                                </div>
+                              </div>
+                              {onMarkPaymentReceived && (
+                                <label className="flex items-center cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={transaction.paymentReceived || false}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      onMarkPaymentReceived(transaction.id, e.target.checked);
+                                    }}
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </label>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500 dark:text-gray-400 italic">No pending payments</div>
+          )}
         </div>
 
-        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Quick Stats</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Total Expenses</span>
-              <span className="font-semibold text-gray-900 dark:text-gray-100">{monthExpenses.length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Self Expenses</span>
-              <span className="font-semibold text-gray-900 dark:text-gray-100">{selfExpenses.length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Other Expenses</span>
-              <span className="font-semibold text-gray-900 dark:text-gray-100">{otherExpenses.length}</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
