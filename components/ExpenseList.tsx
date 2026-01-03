@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Expense } from '@/types/expense';
 import { format, startOfMonth } from 'date-fns';
-import { Pencil, Trash2, Plus, Filter, Search, Eye } from 'lucide-react';
+import { Pencil, Trash2, Plus, Filter, Search, Eye, ChevronDown, ChevronRight } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 import ShimmerLoader from './ShimmerLoader';
 import ColumnVisibilityModal from './ColumnVisibilityModal';
@@ -16,7 +16,8 @@ interface ExpenseListProps {
   onMonthChange: (month: Date) => void;
   onEdit: (expense: Expense) => void;
   onDelete: (id: string) => void;
-  onMarkPaymentReceived: (id: string, received: boolean) => void;
+  onMarkPaymentReceived: (id: string, received: boolean, splitIndex?: number) => void;
+  onUpdateExpense?: (expense: Expense) => void;
   onOpenFilterModal: () => void;
   onOpenAddModal: () => void;
   isLoading?: boolean;
@@ -135,9 +136,10 @@ function ExpenseListSkeleton({ columnVisibility }: { columnVisibility: ColumnVis
   );
 }
 
-export default function ExpenseList({ expenses, allExpenses, currentMonth, onMonthChange, onEdit, onDelete, onMarkPaymentReceived, onOpenFilterModal, onOpenAddModal, isLoading = false, hasActiveFilters = false, totalExpensesCount = 0, onClearFilters }: ExpenseListProps) {
+export default function ExpenseList({ expenses, allExpenses, currentMonth, onMonthChange, onEdit, onDelete, onMarkPaymentReceived, onUpdateExpense, onOpenFilterModal, onOpenAddModal, isLoading = false, hasActiveFilters = false, totalExpensesCount = 0, onClearFilters }: ExpenseListProps) {
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>(DEFAULT_COLUMN_VISIBILITY);
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setColumnVisibility(loadColumnVisibility());
@@ -146,6 +148,18 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
   const handleVisibilityChange = (visibility: ColumnVisibility) => {
     setColumnVisibility(visibility);
     saveColumnVisibility(visibility);
+  };
+
+  const toggleRowExpansion = (expenseId: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(expenseId)) {
+        newSet.delete(expenseId);
+      } else {
+        newSet.add(expenseId);
+      }
+      return newSet;
+    });
   };
 
   if (isLoading) {
@@ -335,101 +349,230 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {expenses.map((expense) => (
-              <tr key={expense.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                {columnVisibility.date && (
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-gray-100">
-                    {format(expense.date, 'MMM dd, yyyy')}
-                  </td>
-                )}
-                {columnVisibility.title && (
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100 max-w-[120px] sm:max-w-none truncate sm:truncate-none">
-                    {expense.title}
-                  </td>
-                )}
-                {columnVisibility.amount && (
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    ₹{formatNumber(expense.amount)}
-                  </td>
-                )}
-                {columnVisibility.paymentMode && (
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
-                    {expense.paymentMode}
-                  </td>
-                )}
-                {columnVisibility.forWhom && (
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                    {expense.forWhom === 'Self' ? (
-                      <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
-                        Self
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                        {expense.forWhom}
-                      </span>
+            {expenses.map((expense) => {
+              const isExpanded = expandedRows.has(expense.id);
+              const isSplit = expense.isSplit && expense.splitDetails && expense.splitDetails.length > 0;
+              const hasAllReceived = isSplit ? expense.splitDetails?.every(s => s.person === 'Self' || s.paymentReceived) : false;
+              const hasAnyReceived = isSplit ? expense.splitDetails?.some(s => s.person !== 'Self' && s.paymentReceived) : false;
+              
+              return (
+                <>
+                  <tr 
+                    key={expense.id} 
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isSplit ? 'cursor-pointer' : ''} ${isExpanded ? 'bg-gray-50 dark:bg-gray-700' : ''}`}
+                    onClick={isSplit ? () => toggleRowExpansion(expense.id) : undefined}
+                  >
+                    {columnVisibility.date && (
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-gray-100">
+                        {isSplit && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleRowExpansion(expense.id);
+                            }}
+                            className="mr-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          >
+                            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          </button>
+                        )}
+                        {format(expense.date, 'MMM dd, yyyy')}
+                      </td>
                     )}
-                    {(expense.transactionType || 'expense') === 'income' && (
-                      <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
-                        Income
-                      </span>
+                    {!columnVisibility.date && isSplit && (
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleRowExpansion(expense.id);
+                          }}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        >
+                          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        </button>
+                      </td>
                     )}
-                    {expense.transactionType === 'donation' && (
-                      <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-300">
-                        Donation
-                      </span>
+                    {columnVisibility.title && (
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100 max-w-[120px] sm:max-w-none truncate sm:truncate-none">
+                        {expense.title}
+                      </td>
                     )}
-                    {expense.transactionType === 'lent' && (
-                      <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300">
-                        Money Lent
-                      </span>
+                    {columnVisibility.amount && (
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        ₹{formatNumber(expense.amount)}
+                      </td>
                     )}
-                  </td>
-                )}
-                {columnVisibility.paymentStatus && (
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm hidden lg:table-cell">
-                    {((expense.transactionType || 'expense') === 'expense' || expense.transactionType === 'donation' || expense.transactionType === 'lent') && expense.forWhom !== 'Self' ? (
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={expense.paymentReceived || false}
-                          onChange={(e) => onMarkPaymentReceived(expense.id, e.target.checked)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
-                        />
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">
-                          {expense.paymentReceived ? 'Received' : 'Pending'}
-                        </span>
-                      </label>
-                    ) : (
-                      <span className="text-gray-400 dark:text-gray-500">—</span>
+                    {columnVisibility.paymentMode && (
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
+                        {expense.paymentMode}
+                      </td>
                     )}
-                  </td>
-                )}
-                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-right text-xs sm:text-sm font-medium">
-                  <div className="flex justify-end gap-1 sm:gap-2">
-                    <button
-                      onClick={() => onEdit(expense)}
-                      className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 focus:outline-none p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
-                      title="Edit"
-                      aria-label="Edit expense"
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm('Are you sure you want to delete this expense?')) {
-                          onDelete(expense.id);
-                        }
-                      }}
-                      className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 focus:outline-none p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                      title="Delete"
-                      aria-label="Delete expense"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                    {columnVisibility.forWhom && (
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                        {expense.forWhom === 'Self' ? (
+                          <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+                            Self
+                          </span>
+                        ) : expense.forWhom === 'Split' ? (
+                          <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">
+                            Split
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                            {expense.forWhom}
+                          </span>
+                        )}
+                        {(expense.transactionType || 'expense') === 'income' && (
+                          <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
+                            Income
+                          </span>
+                        )}
+                        {expense.transactionType === 'donation' && (
+                          <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-300">
+                            Donation
+                          </span>
+                        )}
+                        {expense.transactionType === 'lent' && (
+                          <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300">
+                            Money Lent
+                          </span>
+                        )}
+                      </td>
+                    )}
+                    {columnVisibility.paymentStatus && (
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm hidden lg:table-cell">
+                        {isSplit ? (
+                          <span className="text-gray-700 dark:text-gray-300">
+                            {hasAllReceived ? 'All Received' : hasAnyReceived ? 'Partial' : 'Pending'}
+                          </span>
+                        ) : ((expense.transactionType || 'expense') === 'expense' || expense.transactionType === 'donation' || expense.transactionType === 'lent') && expense.forWhom !== 'Self' ? (
+                          <label className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={expense.paymentReceived || false}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                onMarkPaymentReceived(expense.id, e.target.checked);
+                              }}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
+                            />
+                            <span className="ml-2 text-gray-700 dark:text-gray-300">
+                              {expense.paymentReceived ? 'Received' : 'Pending'}
+                            </span>
+                          </label>
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-500">—</span>
+                        )}
+                      </td>
+                    )}
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-right text-xs sm:text-sm font-medium">
+                      <div className="flex justify-end gap-1 sm:gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(expense);
+                          }}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 focus:outline-none p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                          title="Edit"
+                          aria-label="Edit expense"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm('Are you sure you want to delete this expense?')) {
+                              onDelete(expense.id);
+                            }
+                          }}
+                          className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 focus:outline-none p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                          title="Delete"
+                          aria-label="Delete expense"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {isExpanded && isSplit && expense.splitDetails && (
+                    <tr className="bg-gray-50 dark:bg-gray-700/50">
+                      <td colSpan={
+                        (columnVisibility.date ? 1 : 0) +
+                        (columnVisibility.title ? 1 : 0) +
+                        (columnVisibility.amount ? 1 : 0) +
+                        (columnVisibility.paymentMode ? 1 : 0) +
+                        (columnVisibility.forWhom ? 1 : 0) +
+                        (columnVisibility.paymentStatus ? 1 : 0) +
+                        (!columnVisibility.date && isSplit ? 1 : 0) +
+                        1 // Actions column
+                      } className="px-2 sm:px-4 py-3">
+                        <div className="space-y-2">
+                          <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Split Details:</div>
+                          {expense.splitDetails.map((split, index) => (
+                            <div 
+                              key={index} 
+                              className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600"
+                            >
+                              <div className="flex items-center gap-3 flex-1">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  split.person === 'Self' 
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                    : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                }`}>
+                                  {split.person}
+                                </span>
+                                <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100 font-semibold">
+                                  ₹{formatNumber(split.amount)}
+                                </span>
+                              </div>
+                              {split.person !== 'Self' && (
+                                <label className="flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={split.paymentReceived || false}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      if (expense.splitDetails) {
+                                        const splitIndex = expense.splitDetails.findIndex(s => s.person === split.person);
+                                        if (splitIndex !== -1 && onUpdateExpense) {
+                                          const updatedSplitDetails = expense.splitDetails.map((sd, idx) => {
+                                            if (idx === splitIndex) {
+                                              return {
+                                                ...sd,
+                                                paymentReceived: e.target.checked,
+                                                paymentReceivedDate: e.target.checked ? new Date() : undefined,
+                                              };
+                                            }
+                                            return sd;
+                                          });
+                                          
+                                          const updatedExpense: Expense = {
+                                            ...expense,
+                                            splitDetails: updatedSplitDetails,
+                                          };
+                                          
+                                          onUpdateExpense(updatedExpense);
+                                        } else if (splitIndex !== -1) {
+                                          // Fallback to the existing handler
+                                          onMarkPaymentReceived(expense.id, e.target.checked, splitIndex);
+                                        }
+                                      }
+                                    }}
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
+                                  />
+                                  <span className="ml-2 text-xs text-gray-700 dark:text-gray-300">
+                                    {split.paymentReceived ? 'Received' : 'Pending'}
+                                  </span>
+                                </label>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+            })}
           </tbody>
         </table>
       </div>

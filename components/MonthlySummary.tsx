@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Expense, PaymentMode, TransactionType } from '@/types/expense';
+import { Expense, PaymentMode, TransactionType, SplitDetail } from '@/types/expense';
 import { Budget } from '@/types/budget';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { formatNumber } from '@/lib/utils';
@@ -14,7 +14,8 @@ interface MonthlySummaryProps {
   onMonthChange: (month: Date) => void;
   budget: Budget | null;
   onSetBudget: () => void;
-  onMarkPaymentReceived?: (id: string, received: boolean) => void;
+  onMarkPaymentReceived?: (id: string, received: boolean, splitIndex?: number) => void;
+  onUpdateExpense?: (expense: Expense) => void;
   isLoading?: boolean;
 }
 
@@ -90,7 +91,7 @@ function MonthlySummarySkeleton() {
   );
 }
 
-export default function MonthlySummary({ expenses, currentMonth, onMonthChange, budget, onSetBudget, onMarkPaymentReceived, isLoading = false }: MonthlySummaryProps) {
+export default function MonthlySummary({ expenses, currentMonth, onMonthChange, budget, onSetBudget, onMarkPaymentReceived, onUpdateExpense, isLoading = false }: MonthlySummaryProps) {
   const [expandedPersons, setExpandedPersons] = useState<Set<string>>(new Set());
   if (isLoading) {
     return <MonthlySummarySkeleton />;
@@ -110,13 +111,27 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
   const lentTransactions = monthExpenses.filter((e) => e.transactionType === 'lent');
   const totalDonations = donationTransactions.reduce((sum, e) => sum + e.amount, 0);
 
-  const selfExpenses = expenseTransactions.filter((e) => e.forWhom === 'Self');
-  const otherExpenses = expenseTransactions.filter((e) => e.forWhom !== 'Self');
+  const selfExpenses = expenseTransactions.filter((e) => e.forWhom === 'Self' && !e.isSplit);
+  const otherExpenses = expenseTransactions.filter((e) => e.forWhom !== 'Self' && e.forWhom !== 'Split' && !e.isSplit);
+  const splitExpenses = expenseTransactions.filter((e) => e.isSplit && e.splitDetails);
+  
+  // Calculate total spent by me: regular self expenses + Self's share from split transactions
+  const totalSpentByMe = selfExpenses.reduce((sum, e) => sum + e.amount, 0) +
+    splitExpenses.reduce((sum, e) => {
+      const selfShare = e.splitDetails?.find(s => s.person === 'Self');
+      return sum + (selfShare?.amount || 0);
+    }, 0);
+
   const receivedExpenses = otherExpenses.filter((e) => e.paymentReceived);
   const pendingExpenses = otherExpenses.filter((e) => !e.paymentReceived);
 
-  const totalSpentByMe = selfExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const totalSpentForOthers = otherExpenses.reduce((sum, e) => sum + e.amount, 0);
+  // Calculate total spent for others: regular other expenses + non-Self shares from split transactions
+  const totalSpentForOthers = otherExpenses.reduce((sum, e) => sum + e.amount, 0) +
+    splitExpenses.reduce((sum, e) => {
+      const nonSelfShares = e.splitDetails?.filter(s => s.person !== 'Self') || [];
+      return sum + nonSelfShares.reduce((s, sd) => s + sd.amount, 0);
+    }, 0);
+
   const totalReceived = receivedExpenses.reduce((sum, e) => sum + e.amount, 0);
   const totalPending = pendingExpenses.reduce((sum, e) => sum + e.amount, 0);
   const totalIncome = incomeTransactions.reduce((sum, e) => sum + e.amount, 0);
@@ -127,8 +142,8 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
   const pendingLent = lentTransactions.filter((e) => !e.paymentReceived).reduce((sum, e) => sum + e.amount, 0);
 
   // Calculate money to collect from each person with transaction details
-  // Combine pending expenses, donations, and lent transactions
-  const pendingTransactionsByPerson: Record<string, Expense[]> = {};
+  // Combine pending expenses, donations, lent transactions, and split transaction shares
+  const pendingTransactionsByPerson: Record<string, Array<{ expense: Expense; amount: number; splitIndex?: number }>> = {};
   
   // Add pending expenses (expenses for others that haven't been paid)
   pendingExpenses.forEach((expense) => {
@@ -136,7 +151,26 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
     if (!pendingTransactionsByPerson[person]) {
       pendingTransactionsByPerson[person] = [];
     }
-    pendingTransactionsByPerson[person].push(expense);
+    pendingTransactionsByPerson[person].push({ expense, amount: expense.amount });
+  });
+  
+  // Add split transaction shares (non-Self shares that haven't been paid)
+  splitExpenses.forEach((expense) => {
+    if (expense.splitDetails) {
+      expense.splitDetails.forEach((split, index) => {
+        if (split.person !== 'Self' && !split.paymentReceived) {
+          const person = split.person;
+          if (!pendingTransactionsByPerson[person]) {
+            pendingTransactionsByPerson[person] = [];
+          }
+          pendingTransactionsByPerson[person].push({ 
+            expense, 
+            amount: split.amount,
+            splitIndex: index 
+          });
+        }
+      });
+    }
   });
   
   // Add pending donations (donations for others that haven't been paid)
@@ -146,7 +180,7 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
     if (!pendingTransactionsByPerson[person]) {
       pendingTransactionsByPerson[person] = [];
     }
-    pendingTransactionsByPerson[person].push(expense);
+    pendingTransactionsByPerson[person].push({ expense, amount: expense.amount });
   });
   
   // Add pending lent transactions
@@ -156,16 +190,16 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
     if (!pendingTransactionsByPerson[person]) {
       pendingTransactionsByPerson[person] = [];
     }
-    pendingTransactionsByPerson[person].push(expense);
+    pendingTransactionsByPerson[person].push({ expense, amount: expense.amount });
   });
   
   // Calculate totals and sort by amount (descending)
   const moneyToCollect = Object.entries(pendingTransactionsByPerson)
-    .map(([person, transactions]) => ({
+    .map(([person, items]) => ({
       person,
-      amount: transactions.reduce((sum, t) => sum + t.amount, 0),
-      transactions: transactions.sort((a, b) => b.date.getTime() - a.date.getTime()), // Sort by date, newest first
-      count: transactions.length,
+      amount: items.reduce((sum, item) => sum + item.amount, 0),
+      items: items.sort((a, b) => b.expense.date.getTime() - a.expense.date.getTime()), // Sort by date, newest first
+      count: items.length,
     }))
     .sort((a, b) => b.amount - a.amount);
 
@@ -354,7 +388,7 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Money to Collect</h3>
           {moneyToCollect.length > 0 ? (
             <div className="space-y-3">
-              {moneyToCollect.map(({ person, amount, transactions, count }) => {
+              {moneyToCollect.map(({ person, amount, items, count }) => {
                 const isExpanded = expandedPersons.has(person);
                 return (
                   <div key={person} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -374,7 +408,7 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
                             {person === 'Self' ? 'Self' : person}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {count} {count === 1 ? 'transaction' : 'transactions'}
+                            {count} {count === 1 ? 'item' : 'items'}
                           </div>
                         </div>
                       </div>
@@ -388,51 +422,89 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
                     {/* Transaction Details */}
                     {isExpanded && (
                       <div className="p-3 bg-white dark:bg-gray-800 space-y-2 border-t border-gray-200 dark:border-gray-700">
-                        {transactions.map((transaction) => (
-                          <div
-                            key={transaction.id}
-                            className="flex items-start justify-between gap-3 p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className={`text-xs font-medium ${getTransactionTypeColor(transaction.transactionType)}`}>
-                                  {getTransactionTypeLabel(transaction.transactionType)}
-                                </span>
-                                <span className="text-xs text-gray-400 dark:text-gray-500">•</span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  {format(transaction.date, 'MMM dd, yyyy')}
-                                </span>
-                              </div>
-                              <div className="text-sm text-gray-900 dark:text-gray-100 font-medium truncate">
-                                {transaction.title}
-                              </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                {transaction.paymentMode}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3 flex-shrink-0">
-                              <div className="text-right">
-                                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                  ₹{formatNumber(transaction.amount)}
+                        {items.map((item, itemIndex) => {
+                          const transaction = item.expense;
+                          const isSplit = transaction.isSplit && item.splitIndex !== undefined;
+                          const splitDetail = isSplit && transaction.splitDetails ? transaction.splitDetails[item.splitIndex!] : null;
+                          
+                          return (
+                            <div
+                              key={`${transaction.id}-${itemIndex}`}
+                              className="flex items-start justify-between gap-3 p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className={`text-xs font-medium ${getTransactionTypeColor(transaction.transactionType)}`}>
+                                    {getTransactionTypeLabel(transaction.transactionType)}
+                                  </span>
+                                  {isSplit && (
+                                    <>
+                                      <span className="text-xs text-gray-400 dark:text-gray-500">•</span>
+                                      <span className="text-xs font-medium text-purple-600 dark:text-purple-400">Split</span>
+                                    </>
+                                  )}
+                                  <span className="text-xs text-gray-400 dark:text-gray-500">•</span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    {format(transaction.date, 'MMM dd, yyyy')}
+                                  </span>
+                                </div>
+                                <div className="text-sm text-gray-900 dark:text-gray-100 font-medium truncate">
+                                  {transaction.title}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                  {transaction.paymentMode}
                                 </div>
                               </div>
-                              {onMarkPaymentReceived && (
-                                <label className="flex items-center cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={transaction.paymentReceived || false}
-                                    onChange={(e) => {
-                                      e.stopPropagation();
-                                      onMarkPaymentReceived(transaction.id, e.target.checked);
-                                    }}
-                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
-                                </label>
-                              )}
+                              <div className="flex items-center gap-3 flex-shrink-0">
+                                <div className="text-right">
+                                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                    ₹{formatNumber(item.amount)}
+                                  </div>
+                                  {isSplit && transaction.amount !== item.amount && (
+                                    <div className="text-xs text-gray-400 dark:text-gray-500">
+                                      of ₹{formatNumber(transaction.amount)}
+                                    </div>
+                                  )}
+                                </div>
+                                {onMarkPaymentReceived && (
+                                  <label className="flex items-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSplit ? (splitDetail?.paymentReceived || false) : (transaction.paymentReceived || false)}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        if (isSplit && item.splitIndex !== undefined && onUpdateExpense) {
+                                          // Update split detail payment status
+                                          if (transaction.splitDetails) {
+                                            const updatedSplitDetails = transaction.splitDetails.map((sd, idx) => {
+                                              if (idx === item.splitIndex) {
+                                                return {
+                                                  ...sd,
+                                                  paymentReceived: e.target.checked,
+                                                  paymentReceivedDate: e.target.checked ? new Date() : undefined,
+                                                };
+                                              }
+                                              return sd;
+                                            });
+                                            const updatedExpense: Expense = {
+                                              ...transaction,
+                                              splitDetails: updatedSplitDetails,
+                                            };
+                                            onUpdateExpense(updatedExpense);
+                                          }
+                                        } else if (onMarkPaymentReceived) {
+                                          onMarkPaymentReceived(transaction.id, e.target.checked, item.splitIndex);
+                                        }
+                                      }}
+                                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                  </label>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Expense, PaymentMode, TransactionType } from '@/types/expense';
-import { X } from 'lucide-react';
+import { Expense, PaymentMode, TransactionType, SplitDetail } from '@/types/expense';
+import { X, Plus, Trash2 } from 'lucide-react';
 
 interface ExpenseFormProps {
   onSubmit: (expense: Omit<Expense, 'id'>) => void;
@@ -25,6 +25,13 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
   const [paymentReceived, setPaymentReceived] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [isSplit, setIsSplit] = useState(false);
+  const [splitDetails, setSplitDetails] = useState<SplitDetail[]>([
+    { person: 'Self', amount: 0, paymentReceived: false },
+    { person: '', amount: 0, paymentReceived: false }
+  ]);
+  const [splitSuggestions, setSplitSuggestions] = useState<Record<number, string[]>>({});
+  const [splitHighlightedIndex, setSplitHighlightedIndex] = useState<Record<number, number>>({});
 
   const formatDateForInput = (date: Date) => {
     return new Date(date).toISOString().split('T')[0];
@@ -39,6 +46,15 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
       setDate(formatDateForInput(editingExpense.date));
       setTransactionType(editingExpense.transactionType || 'expense');
       setPaymentReceived(editingExpense.paymentReceived || false);
+      setIsSplit(editingExpense.isSplit || false);
+      if (editingExpense.isSplit && editingExpense.splitDetails) {
+        setSplitDetails(editingExpense.splitDetails);
+      } else {
+        setSplitDetails([
+          { person: 'Self', amount: 0, paymentReceived: false },
+          { person: '', amount: 0, paymentReceived: false }
+        ]);
+      }
     } else {
       resetForm();
     }
@@ -70,6 +86,13 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
     setDate(new Date().toISOString().split('T')[0]);
     setTransactionType('expense');
     setPaymentReceived(false);
+    setIsSplit(false);
+    setSplitDetails([
+      { person: 'Self', amount: 0, paymentReceived: false },
+      { person: '', amount: 0, paymentReceived: false }
+    ]);
+    setSplitSuggestions({});
+    setSplitHighlightedIndex({});
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -79,8 +102,49 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
       return;
     }
 
+    // Validate split transaction if enabled
+    if (isSplit && transactionType === 'expense') {
+      // Check minimum 2 people
+      if (splitDetails.length < 2) {
+        alert('Split transaction must have at least 2 people.');
+        return;
+      }
+
+      // Check all people have names
+      const hasEmptyNames = splitDetails.some(s => !s.person.trim());
+      if (hasEmptyNames) {
+        alert('All people in split transaction must have names.');
+        return;
+      }
+
+      // Check for duplicate names
+      const names = splitDetails.map(s => s.person.trim().toLowerCase());
+      const uniqueNames = new Set(names);
+      if (uniqueNames.size !== names.length) {
+        alert('Duplicate person names are not allowed in split transaction.');
+        return;
+      }
+
+      // Check that Self is included
+      const hasSelf = splitDetails.some(s => s.person.trim().toLowerCase() === 'self');
+      if (!hasSelf) {
+        alert('Split transaction must include "Self".');
+        return;
+      }
+
+      // Validate total equals sum of splits
+      const totalAmount = parseFloat(amount);
+      const sumOfSplits = splitDetails.reduce((sum, s) => sum + (s.amount || 0), 0);
+      const difference = Math.abs(totalAmount - sumOfSplits);
+      if (difference > 0.01) { // Allow small floating point differences
+        alert(`Total amount (₹${totalAmount.toFixed(2)}) does not match sum of splits (₹${sumOfSplits.toFixed(2)}).`);
+        return;
+      }
+    }
+
     // Normalize "self" to "Self" (case-insensitive)
-    const normalizedForWhom = forWhom.trim().toLowerCase() === 'self' ? 'Self' : forWhom.trim();
+    const normalizedForWhom = isSplit && transactionType === 'expense' ? 'Split' : 
+      (forWhom.trim().toLowerCase() === 'self' ? 'Self' : forWhom.trim());
     
     // Validate: lent transactions cannot be for "Self"
     if (transactionType === 'lent' && normalizedForWhom === 'Self') {
@@ -95,8 +159,15 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
       forWhom: normalizedForWhom,
       date: new Date(date),
       transactionType,
-      paymentReceived: (transactionType === 'expense' || transactionType === 'donation' || transactionType === 'lent') && normalizedForWhom !== 'Self' ? paymentReceived : false,
-      paymentReceivedDate: (transactionType === 'expense' || transactionType === 'donation' || transactionType === 'lent') && normalizedForWhom !== 'Self' && paymentReceived ? new Date() : undefined,
+      paymentReceived: (transactionType === 'expense' || transactionType === 'donation' || transactionType === 'lent') && normalizedForWhom !== 'Self' && !isSplit ? paymentReceived : false,
+      paymentReceivedDate: (transactionType === 'expense' || transactionType === 'donation' || transactionType === 'lent') && normalizedForWhom !== 'Self' && !isSplit && paymentReceived ? new Date() : undefined,
+      isSplit: isSplit && transactionType === 'expense',
+      splitDetails: isSplit && transactionType === 'expense' ? splitDetails.map(s => ({
+        person: s.person.trim().toLowerCase() === 'self' ? 'Self' : s.person.trim(),
+        amount: s.amount,
+        paymentReceived: s.paymentReceived || false,
+        paymentReceivedDate: s.paymentReceived && s.paymentReceivedDate ? s.paymentReceivedDate : undefined
+      })) : undefined,
     };
 
     onSubmit(expenseData);
@@ -206,15 +277,167 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
         setShowSuggestions(false);
         setHighlightedIndex(-1);
       }
+      if (!target.closest('.split-person-autocomplete')) {
+        setSplitSuggestions({});
+        setSplitHighlightedIndex({});
+      }
     };
 
-    if (showSuggestions) {
+    if (showSuggestions || Object.keys(splitSuggestions).length > 0) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }
-  }, [showSuggestions]);
+  }, [showSuggestions, splitSuggestions]);
+
+  // Auto-calculate last person's amount when split is enabled
+  useEffect(() => {
+    if (isSplit && transactionType === 'expense' && amount && splitDetails.length > 0) {
+      const totalAmount = parseFloat(amount);
+      if (!isNaN(totalAmount) && totalAmount > 0) {
+        const lastIndex = splitDetails.length - 1;
+        const sumOfOthers = splitDetails.slice(0, -1).reduce((sum, s) => sum + (s.amount || 0), 0);
+        const lastAmount = totalAmount - sumOfOthers;
+        const currentLastAmount = splitDetails[lastIndex]?.amount || 0;
+        
+        // Only update if the calculated amount differs significantly (avoid infinite loops)
+        // Also check if we're not currently editing the last person's amount
+        if (Math.abs(lastAmount - currentLastAmount) > 0.01 && lastIndex >= 0) {
+          setSplitDetails(prev => {
+            const updated = [...prev];
+            if (updated[lastIndex]) {
+              updated[lastIndex] = {
+                ...updated[lastIndex],
+                amount: Math.max(0, lastAmount) // Ensure non-negative
+              };
+            }
+            return updated;
+          });
+        }
+      }
+    }
+  }, [amount, isSplit, transactionType, splitDetails.map((s, i) => i < splitDetails.length - 1 ? s.amount : null).join(',')]);
+
+  // Handle split toggle
+  const handleSplitToggle = (checked: boolean) => {
+    if (checked && transactionType === 'expense') {
+      setIsSplit(true);
+      // Initialize with Self and one other person
+      if (splitDetails.length < 2) {
+        setSplitDetails([
+          { person: 'Self', amount: 0, paymentReceived: false },
+          { person: '', amount: 0, paymentReceived: false }
+        ]);
+      }
+      // Pre-fill amounts if total amount is set
+      if (amount) {
+        const totalAmount = parseFloat(amount);
+        if (!isNaN(totalAmount) && totalAmount > 0) {
+          const perPerson = totalAmount / splitDetails.length;
+          setSplitDetails(prev => prev.map((s, i) => ({
+            ...s,
+            amount: i === prev.length - 1 ? totalAmount - (perPerson * (prev.length - 1)) : perPerson
+          })));
+        }
+      }
+    } else {
+      // Ask for confirmation if converting from split to regular
+      if (isSplit && splitDetails.length > 0) {
+        if (!confirm('Converting to regular transaction will lose split details. Continue?')) {
+          return;
+        }
+      }
+      setIsSplit(false);
+      setSplitDetails([
+        { person: 'Self', amount: 0, paymentReceived: false },
+        { person: '', amount: 0, paymentReceived: false }
+      ]);
+    }
+  };
+
+  // Add person to split
+  const handleAddPerson = () => {
+    setSplitDetails(prev => [...prev, { person: '', amount: 0, paymentReceived: false }]);
+  };
+
+  // Remove person from split
+  const handleRemovePerson = (index: number) => {
+    if (splitDetails.length <= 2) {
+      alert('Split transaction must have at least 2 people.');
+      return;
+    }
+    setSplitDetails(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Update split detail
+  const handleSplitDetailChange = (index: number, field: keyof SplitDetail, value: string | number | boolean) => {
+    setSplitDetails(prev => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        [field]: value
+      };
+      return updated;
+    });
+  };
+
+  // Get suggestions for split person name
+  const getSplitSuggestions = (index: number, input: string): string[] => {
+    const inputLower = input.trim().toLowerCase();
+    if (inputLower === '') {
+      const allSuggestions = ['Self', ...forWhomSuggestions];
+      // Remove names already used in other splits
+      const usedNames = splitDetails
+        .map((s, i) => i !== index ? s.person.trim().toLowerCase() : '')
+        .filter(Boolean);
+      return allSuggestions.filter(s => !usedNames.includes(s.toLowerCase()));
+    }
+    
+    const matching = forWhomSuggestions.filter(suggestion =>
+      suggestion.toLowerCase().includes(inputLower) &&
+      suggestion.toLowerCase() !== inputLower &&
+      !splitDetails.some((s, i) => i !== index && s.person.trim().toLowerCase() === suggestion.toLowerCase())
+    );
+    
+    const selfMatches = inputLower === 'self' || 'self'.includes(inputLower);
+    if (selfMatches && !splitDetails.some((s, i) => i !== index && s.person.trim().toLowerCase() === 'self')) {
+      return ['Self', ...matching];
+    }
+    
+    return matching;
+  };
+
+  // Handle split person name change
+  const handleSplitPersonChange = (index: number, value: string) => {
+    // Prevent "Self" input if already exists
+    if (value.trim().toLowerCase() === 'self' && splitDetails.some((s, i) => i !== index && s.person.trim().toLowerCase() === 'self')) {
+      return;
+    }
+    handleSplitDetailChange(index, 'person', value);
+    setSplitSuggestions(prev => ({ ...prev, [index]: getSplitSuggestions(index, value) }));
+  };
+
+  // Handle split person name focus
+  const handleSplitPersonFocus = (index: number) => {
+    const currentValue = splitDetails[index]?.person || '';
+    setSplitSuggestions(prev => ({ ...prev, [index]: getSplitSuggestions(index, currentValue) }));
+  };
+
+  // Select split person suggestion
+  const handleSelectSplitSuggestion = (index: number, suggestion: string) => {
+    handleSplitDetailChange(index, 'person', suggestion);
+    setSplitSuggestions(prev => {
+      const updated = { ...prev };
+      delete updated[index];
+      return updated;
+    });
+    setSplitHighlightedIndex(prev => {
+      const updated = { ...prev };
+      delete updated[index];
+      return updated;
+    });
+  };
 
   if (!isOpen) return null;
 
@@ -259,6 +482,14 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
               // If switching to 'lent' and forWhom is 'Self', clear it
               if (newType === 'lent' && forWhom === 'Self') {
                 setForWhom('');
+              }
+              // Disable split if not expense
+              if (newType !== 'expense' && isSplit) {
+                setIsSplit(false);
+                setSplitDetails([
+                  { person: 'Self', amount: 0, paymentReceived: false },
+                  { person: '', amount: 0, paymentReceived: false }
+                ]);
               }
             }}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -321,53 +552,178 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
           </select>
         </div>
 
-        <div className="for-whom-autocomplete relative">
-          <label htmlFor="forWhom" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {transactionType === 'income' ? 'From Whom' : transactionType === 'lent' ? 'To Whom' : 'For Whom'} *
-          </label>
-          <input
-            type="text"
-            id="forWhom"
-            value={forWhom}
-            onChange={(e) => {
-              const value = e.target.value;
-              // Prevent "Self" input for lent transactions
-              if (transactionType === 'lent' && value.trim().toLowerCase() === 'self') {
-                return;
-              }
-              handleForWhomChange(value);
-            }}
-            onFocus={handleForWhomFocus}
-            onKeyDown={handleKeyDown}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder={transactionType === 'income' ? "Person's name" : transactionType === 'donation' ? "Self, organization or person's name" : transactionType === 'lent' ? "Person's name" : "Self or person's name"}
-            required
-            autoComplete="off"
-          />
-          {showSuggestions && getFilteredSuggestionsForLent().length > 0 && (
-            <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
-              {getFilteredSuggestionsForLent().map((suggestion, index) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => handleSelectSuggestion(suggestion)}
-                  className={`w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 focus:bg-blue-50 dark:focus:bg-blue-900/30 focus:outline-none transition-colors ${
-                    index === highlightedIndex ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-white dark:bg-gray-800'
-                  }`}
-                  onMouseEnter={() => setHighlightedIndex(index)}
-                >
-                  <span className="text-sm text-gray-900 dark:text-gray-100">
-                    {suggestion === 'Self' ? (
-                      <span className="font-medium text-green-700 dark:text-green-400">{suggestion}</span>
-                    ) : (
-                      suggestion
-                    )}
-                  </span>
-                </button>
-              ))}
+        {!isSplit && (
+          <div className="for-whom-autocomplete relative">
+            <label htmlFor="forWhom" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {transactionType === 'income' ? 'From Whom' : transactionType === 'lent' ? 'To Whom' : 'For Whom'} *
+            </label>
+            <input
+              type="text"
+              id="forWhom"
+              value={forWhom}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Prevent "Self" input for lent transactions
+                if (transactionType === 'lent' && value.trim().toLowerCase() === 'self') {
+                  return;
+                }
+                handleForWhomChange(value);
+              }}
+              onFocus={handleForWhomFocus}
+              onKeyDown={handleKeyDown}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder={transactionType === 'income' ? "Person's name" : transactionType === 'donation' ? "Self, organization or person's name" : transactionType === 'lent' ? "Person's name" : "Self or person's name"}
+              required
+              autoComplete="off"
+            />
+            {showSuggestions && getFilteredSuggestionsForLent().length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
+                {getFilteredSuggestionsForLent().map((suggestion, index) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => handleSelectSuggestion(suggestion)}
+                    className={`w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 focus:bg-blue-50 dark:focus:bg-blue-900/30 focus:outline-none transition-colors ${
+                      index === highlightedIndex ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-white dark:bg-gray-800'
+                    }`}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                  >
+                    <span className="text-sm text-gray-900 dark:text-gray-100">
+                      {suggestion === 'Self' ? (
+                        <span className="font-medium text-green-700 dark:text-green-400">{suggestion}</span>
+                      ) : (
+                        suggestion
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {transactionType === 'expense' && (
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="isSplit"
+              checked={isSplit}
+              onChange={(e) => handleSplitToggle(e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
+            />
+            <label htmlFor="isSplit" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+              Split Transaction
+            </label>
+          </div>
+        )}
+
+        {isSplit && transactionType === 'expense' && (
+          <div className="border border-gray-300 dark:border-gray-600 rounded-md p-4 bg-gray-50 dark:bg-gray-700/50 space-y-4">
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Split Details
             </div>
-          )}
-        </div>
+            {splitDetails.map((split, index) => {
+              const isLast = index === splitDetails.length - 1;
+              const isSelf = split.person.trim().toLowerCase() === 'self';
+              return (
+                <div key={index} className="space-y-2">
+                  <div className="flex gap-2 items-start">
+                    <div className="flex-1 split-person-autocomplete relative">
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        Person {index + 1} {isLast && '(Auto-calculated)'}
+                      </label>
+                      <input
+                        type="text"
+                        value={split.person}
+                        onChange={(e) => handleSplitPersonChange(index, e.target.value)}
+                        onFocus={() => handleSplitPersonFocus(index)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        placeholder={isSelf ? "Self" : "Person's name"}
+                        disabled={isSelf}
+                        required
+                        autoComplete="off"
+                      />
+                      {splitSuggestions[index] && splitSuggestions[index].length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
+                          {splitSuggestions[index].map((suggestion, sugIndex) => (
+                            <button
+                              key={suggestion}
+                              type="button"
+                              onClick={() => handleSelectSplitSuggestion(index, suggestion)}
+                              className={`w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 focus:bg-blue-50 dark:focus:bg-blue-900/30 focus:outline-none transition-colors text-sm ${
+                                sugIndex === splitHighlightedIndex[index] ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-white dark:bg-gray-800'
+                              }`}
+                            >
+                              <span className={suggestion === 'Self' ? 'font-medium text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}>
+                                {suggestion}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        Amount {isLast && '(Auto)'}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={split.amount || ''}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value) || 0;
+                          handleSplitDetailChange(index, 'amount', value);
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        placeholder="0.00"
+                        disabled={isLast}
+                        required
+                      />
+                    </div>
+                    {!isSelf && (
+                      <div className="flex items-end pb-1">
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePerson(index)}
+                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                          title="Remove person"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {!isSelf && (
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`splitPaymentReceived-${index}`}
+                        checked={split.paymentReceived || false}
+                        onChange={(e) => handleSplitDetailChange(index, 'paymentReceived', e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
+                      />
+                      <label htmlFor={`splitPaymentReceived-${index}`} className="ml-2 block text-xs text-gray-700 dark:text-gray-300">
+                        Payment received from {split.person || 'this person'}
+                      </label>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <button
+              type="button"
+              onClick={handleAddPerson}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-600 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+            >
+              <Plus size={16} />
+              Add Person
+            </button>
+            <div className="text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-300 dark:border-gray-600">
+              Total: ₹{parseFloat(amount || '0').toFixed(2)} | 
+              Split Sum: ₹{splitDetails.reduce((sum, s) => sum + (s.amount || 0), 0).toFixed(2)}
+            </div>
+          </div>
+        )}
 
         <div>
           <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -383,7 +739,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
           />
         </div>
 
-        {((transactionType === 'expense' || transactionType === 'donation' || transactionType === 'lent') && forWhom !== 'Self' && forWhom.trim() !== '') && (
+        {((transactionType === 'expense' || transactionType === 'donation' || transactionType === 'lent') && forWhom !== 'Self' && forWhom.trim() !== '' && !isSplit) && (
           <div className="flex items-center">
             <input
               type="checkbox"

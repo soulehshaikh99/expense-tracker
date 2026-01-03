@@ -63,6 +63,13 @@ export default function Home() {
           transactionType: data.transactionType || 'expense', // Default to 'expense' for backward compatibility
           paymentReceived: data.paymentReceived || false,
           paymentReceivedDate: data.paymentReceivedDate ? data.paymentReceivedDate.toDate() : undefined,
+          isSplit: data.isSplit || false,
+          splitDetails: data.splitDetails ? data.splitDetails.map((sd: any) => ({
+            person: sd.person,
+            amount: sd.amount,
+            paymentReceived: sd.paymentReceived || false,
+            paymentReceivedDate: sd.paymentReceivedDate ? sd.paymentReceivedDate.toDate() : undefined,
+          })) : undefined,
         });
       });
       setExpenses(expensesData);
@@ -150,7 +157,7 @@ export default function Home() {
 
   const handleAddExpense = async (expenseData: Omit<Expense, 'id'>) => {
     try {
-      const expensePayload = {
+      const expensePayload: any = {
         title: expenseData.title,
         amount: expenseData.amount,
         paymentMode: expenseData.paymentMode,
@@ -162,6 +169,22 @@ export default function Home() {
           ? Timestamp.fromDate(expenseData.paymentReceivedDate)
           : null,
       };
+
+      // Add split transaction data if present
+      if (expenseData.isSplit && expenseData.splitDetails) {
+        expensePayload.isSplit = true;
+        expensePayload.splitDetails = expenseData.splitDetails.map(sd => ({
+          person: sd.person,
+          amount: sd.amount,
+          paymentReceived: sd.paymentReceived || false,
+          paymentReceivedDate: sd.paymentReceivedDate
+            ? Timestamp.fromDate(sd.paymentReceivedDate)
+            : null,
+        }));
+      } else {
+        expensePayload.isSplit = false;
+        expensePayload.splitDetails = null;
+      }
       
       await addDoc(collection(db, 'expenses'), expensePayload);
       fetchExpenses();
@@ -195,14 +218,36 @@ export default function Home() {
   const handleUpdateExpense = async (id: string, expenseData: Omit<Expense, 'id'>) => {
     try {
       const expenseRef = doc(db, 'expenses', id);
-      await updateDoc(expenseRef, {
-        ...expenseData,
+      const updateData: any = {
+        title: expenseData.title,
+        amount: expenseData.amount,
+        paymentMode: expenseData.paymentMode,
+        forWhom: expenseData.forWhom,
         date: Timestamp.fromDate(expenseData.date),
         transactionType: expenseData.transactionType || 'expense',
+        paymentReceived: expenseData.paymentReceived || false,
         paymentReceivedDate: expenseData.paymentReceivedDate
           ? Timestamp.fromDate(expenseData.paymentReceivedDate)
           : null,
-      });
+      };
+
+      // Add split transaction data if present
+      if (expenseData.isSplit && expenseData.splitDetails) {
+        updateData.isSplit = true;
+        updateData.splitDetails = expenseData.splitDetails.map(sd => ({
+          person: sd.person,
+          amount: sd.amount,
+          paymentReceived: sd.paymentReceived || false,
+          paymentReceivedDate: sd.paymentReceivedDate
+            ? Timestamp.fromDate(sd.paymentReceivedDate)
+            : null,
+        }));
+      } else {
+        updateData.isSplit = false;
+        updateData.splitDetails = null;
+      }
+
+      await updateDoc(expenseRef, updateData);
       fetchExpenses();
       setEditingExpense(null);
     } catch (error) {
@@ -263,13 +308,43 @@ export default function Home() {
                           (currentMonth.getMonth() !== new Date().getMonth() || 
                            currentMonth.getFullYear() !== new Date().getFullYear());
 
-  const handleMarkPaymentReceived = async (id: string, received: boolean) => {
+  const handleMarkPaymentReceived = async (id: string, received: boolean, splitIndex?: number) => {
     try {
+      const expense = expenses.find(e => e.id === id);
+      if (!expense) return;
+
       const expenseRef = doc(db, 'expenses', id);
-      await updateDoc(expenseRef, {
-        paymentReceived: received,
-        paymentReceivedDate: received ? Timestamp.now() : null,
-      });
+
+      // If it's a split transaction and splitIndex is provided, update that specific split detail
+      if (expense.isSplit && expense.splitDetails && splitIndex !== undefined) {
+        const updatedSplitDetails = expense.splitDetails.map((sd, index) => {
+          if (index === splitIndex) {
+            return {
+              ...sd,
+              paymentReceived: received,
+              paymentReceivedDate: received ? new Date() : undefined,
+            };
+          }
+          return sd;
+        });
+
+        await updateDoc(expenseRef, {
+          splitDetails: updatedSplitDetails.map(sd => ({
+            person: sd.person,
+            amount: sd.amount,
+            paymentReceived: sd.paymentReceived || false,
+            paymentReceivedDate: sd.paymentReceivedDate
+              ? Timestamp.fromDate(sd.paymentReceivedDate)
+              : null,
+          })),
+        });
+      } else {
+        // Regular transaction or aggregate update for split
+        await updateDoc(expenseRef, {
+          paymentReceived: received,
+          paymentReceivedDate: received ? Timestamp.now() : null,
+        });
+      }
       fetchExpenses();
     } catch (error) {
       console.error('Error updating payment status:', error);
@@ -443,6 +518,7 @@ export default function Home() {
               onEdit={handleEditExpense}
               onDelete={handleDeleteExpense}
               onMarkPaymentReceived={handleMarkPaymentReceived}
+              onUpdateExpense={(expense) => handleUpdateExpense(expense.id, expense)}
               onOpenFilterModal={handleOpenFilterModal}
               onOpenAddModal={handleOpenModal}
               isLoading={isLoadingExpenses}
@@ -460,6 +536,7 @@ export default function Home() {
               budget={currentBudget}
               onSetBudget={handleOpenBudgetModal}
               onMarkPaymentReceived={handleMarkPaymentReceived}
+              onUpdateExpense={(expense) => handleUpdateExpense(expense.id, expense)}
               isLoading={isLoadingExpenses || isLoadingBudgets}
             />
           </div>
