@@ -7,7 +7,8 @@ import { Pencil, Trash2, Plus, Filter, Search, Eye, ChevronDown, ChevronRight } 
 import { formatNumber } from '@/lib/utils';
 import ShimmerLoader from './ShimmerLoader';
 import ColumnVisibilityModal from './ColumnVisibilityModal';
-import { ColumnId, ColumnVisibility, loadColumnVisibility, saveColumnVisibility, DEFAULT_COLUMN_VISIBILITY } from '@/types/columnVisibility';
+import { ColumnId, ColumnVisibility, loadColumnVisibility, saveColumnVisibility, DEFAULT_COLUMN_VISIBILITY, ColumnWidths, loadColumnWidths, saveColumnWidths, DEFAULT_COLUMN_WIDTHS } from '@/types/columnVisibility';
+import ColumnResizer from './ColumnResizer';
 
 interface ExpenseListProps {
   expenses: Expense[];
@@ -26,7 +27,7 @@ interface ExpenseListProps {
   onClearFilters?: () => void;
 }
 
-function ExpenseListSkeleton({ columnVisibility }: { columnVisibility: ColumnVisibility }) {
+function ExpenseListSkeleton({ columnVisibility, columnWidths }: { columnVisibility: ColumnVisibility; columnWidths: ColumnWidths }) {
   const headerContent = (
     <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
       <div className="flex flex-row justify-between items-center gap-2 sm:gap-0">
@@ -138,16 +139,34 @@ function ExpenseListSkeleton({ columnVisibility }: { columnVisibility: ColumnVis
 
 export default function ExpenseList({ expenses, allExpenses, currentMonth, onMonthChange, onEdit, onDelete, onMarkPaymentReceived, onUpdateExpense, onOpenFilterModal, onOpenAddModal, isLoading = false, hasActiveFilters = false, totalExpensesCount = 0, onClearFilters }: ExpenseListProps) {
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>(DEFAULT_COLUMN_VISIBILITY);
+  const [columnWidths, setColumnWidths] = useState<ColumnWidths>(DEFAULT_COLUMN_WIDTHS);
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setColumnVisibility(loadColumnVisibility());
+    setColumnWidths(loadColumnWidths());
   }, []);
 
   const handleVisibilityChange = (visibility: ColumnVisibility) => {
     setColumnVisibility(visibility);
     saveColumnVisibility(visibility);
+  };
+
+  const handleResize = (columnId: ColumnId, newWidth: number) => {
+    setColumnWidths((prev) => {
+      const newWidths = {
+        ...prev,
+        [columnId]: Math.max(80, newWidth), // Minimum width of 80px
+      };
+      saveColumnWidths(newWidths);
+      return newWidths;
+    });
+  };
+
+  const handleResetWidths = () => {
+    setColumnWidths(DEFAULT_COLUMN_WIDTHS);
+    saveColumnWidths(DEFAULT_COLUMN_WIDTHS);
   };
 
   const toggleRowExpansion = (expenseId: string) => {
@@ -163,7 +182,7 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
   };
 
   if (isLoading) {
-    return <ExpenseListSkeleton columnVisibility={columnVisibility} />;
+    return <ExpenseListSkeleton columnVisibility={columnVisibility} columnWidths={columnWidths} />;
   }
 
   // Get unique months from expenses
@@ -314,33 +333,39 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
               {columnVisibility.date && (
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider relative" style={{ width: columnWidths.date, minWidth: columnWidths.date }}>
                   Date
+                  <ColumnResizer onResize={(newWidth) => handleResize('date', newWidth)} minWidth={80} />
                 </th>
               )}
               {columnVisibility.title && (
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider relative" style={{ width: columnWidths.title, minWidth: columnWidths.title }}>
                   Title
+                  <ColumnResizer onResize={(newWidth) => handleResize('title', newWidth)} minWidth={80} />
                 </th>
               )}
               {columnVisibility.amount && (
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider relative" style={{ width: columnWidths.amount, minWidth: columnWidths.amount }}>
                   Amount
+                  <ColumnResizer onResize={(newWidth) => handleResize('amount', newWidth)} minWidth={80} />
                 </th>
               )}
               {columnVisibility.paymentMode && (
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell relative" style={{ width: columnWidths.paymentMode, minWidth: columnWidths.paymentMode }}>
                   Payment Mode
+                  <ColumnResizer onResize={(newWidth) => handleResize('paymentMode', newWidth)} minWidth={80} />
                 </th>
               )}
               {columnVisibility.forWhom && (
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider relative" style={{ width: columnWidths.forWhom, minWidth: columnWidths.forWhom }}>
                   For/From Whom
+                  <ColumnResizer onResize={(newWidth) => handleResize('forWhom', newWidth)} minWidth={80} />
                 </th>
               )}
               {columnVisibility.paymentStatus && (
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell relative" style={{ width: columnWidths.paymentStatus, minWidth: columnWidths.paymentStatus }}>
                   Payment Status
+                  <ColumnResizer onResize={(newWidth) => handleResize('paymentStatus', newWidth)} minWidth={80} />
                 </th>
               )}
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -363,7 +388,7 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
                     onClick={isSplit ? () => toggleRowExpansion(expense.id) : undefined}
                   >
                     {columnVisibility.date && (
-                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-gray-100">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-gray-100" style={{ width: columnWidths.date, minWidth: columnWidths.date }}>
                         {isSplit && (
                           <button
                             onClick={(e) => {
@@ -392,22 +417,22 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
                       </td>
                     )}
                     {columnVisibility.title && (
-                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100 max-w-[120px] sm:max-w-none truncate sm:truncate-none">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100 max-w-[120px] sm:max-w-none truncate sm:truncate-none" style={{ width: columnWidths.title, minWidth: columnWidths.title }}>
                         {expense.title}
                       </td>
                     )}
                     {columnVisibility.amount && (
-                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900 dark:text-gray-100" style={{ width: columnWidths.amount, minWidth: columnWidths.amount }}>
                         ₹{formatNumber(expense.amount)}
                       </td>
                     )}
                     {columnVisibility.paymentMode && (
-                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell" style={{ width: columnWidths.paymentMode, minWidth: columnWidths.paymentMode }}>
                         {expense.paymentMode}
                       </td>
                     )}
                     {columnVisibility.forWhom && (
-                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400" style={{ width: columnWidths.forWhom, minWidth: columnWidths.forWhom }}>
                         {expense.forWhom === 'Self' ? (
                           <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                             Self
@@ -439,7 +464,7 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
                       </td>
                     )}
                     {columnVisibility.paymentStatus && (
-                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm hidden lg:table-cell">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm hidden lg:table-cell" style={{ width: columnWidths.paymentStatus, minWidth: columnWidths.paymentStatus }}>
                         {isSplit ? (
                           <span className="text-gray-700 dark:text-gray-300">
                             {hasAllReceived ? 'All Received' : hasAnyReceived ? 'Partial' : 'Pending'}
@@ -595,6 +620,7 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
         onClose={() => setIsColumnModalOpen(false)}
         columnVisibility={columnVisibility}
         onVisibilityChange={handleVisibilityChange}
+        onResetWidths={handleResetWidths}
       />
     </div>
   );

@@ -2,7 +2,10 @@ export type ColumnId = 'date' | 'title' | 'amount' | 'paymentMode' | 'forWhom' |
 
 export type ColumnVisibility = Record<ColumnId, boolean>;
 
+export type ColumnWidths = Record<ColumnId, number>;
+
 const STORAGE_KEY = 'expense-tracker-column-visibility';
+const WIDTH_STORAGE_KEY = 'expense-tracker-column-widths';
 
 export const DEFAULT_COLUMN_VISIBILITY: ColumnVisibility = {
   date: true,
@@ -50,6 +53,46 @@ export function saveColumnVisibility(visibility: ColumnVisibility): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(visibility));
   } catch (error) {
     console.error('Error saving column visibility preferences:', error);
+  }
+}
+
+export const DEFAULT_COLUMN_WIDTHS: ColumnWidths = {
+  date: 140,
+  title: 200,
+  amount: 120,
+  paymentMode: 140,
+  forWhom: 180,
+  paymentStatus: 150,
+};
+
+export function loadColumnWidths(): ColumnWidths {
+  if (typeof window === 'undefined') {
+    return DEFAULT_COLUMN_WIDTHS;
+  }
+
+  try {
+    const stored = localStorage.getItem(WIDTH_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Merge with defaults to handle new columns or missing keys
+      return { ...DEFAULT_COLUMN_WIDTHS, ...parsed };
+    }
+  } catch (error) {
+    console.error('Error loading column width preferences:', error);
+  }
+
+  return DEFAULT_COLUMN_WIDTHS;
+}
+
+export function saveColumnWidths(widths: ColumnWidths): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    localStorage.setItem(WIDTH_STORAGE_KEY, JSON.stringify(widths));
+  } catch (error) {
+    console.error('Error saving column width preferences:', error);
   }
 }
 

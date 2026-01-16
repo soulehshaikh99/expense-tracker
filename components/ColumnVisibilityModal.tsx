@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { ColumnId, ColumnVisibility, COLUMN_LABELS, DEFAULT_COLUMN_VISIBILITY } from '@/types/columnVisibility';
+import { ColumnId, ColumnVisibility, COLUMN_LABELS, DEFAULT_COLUMN_VISIBILITY, DEFAULT_COLUMN_WIDTHS } from '@/types/columnVisibility';
 import { Switch } from './ui/switch';
 
 interface ColumnVisibilityModalProps {
@@ -10,6 +10,7 @@ interface ColumnVisibilityModalProps {
   onClose: () => void;
   columnVisibility: ColumnVisibility;
   onVisibilityChange: (visibility: ColumnVisibility) => void;
+  onResetWidths?: () => void;
 }
 
 export default function ColumnVisibilityModal({
@@ -17,6 +18,7 @@ export default function ColumnVisibilityModal({
   onClose,
   columnVisibility,
   onVisibilityChange,
+  onResetWidths,
 }: ColumnVisibilityModalProps) {
   const [localVisibility, setLocalVisibility] = useState<ColumnVisibility>(columnVisibility);
 
@@ -112,6 +114,19 @@ export default function ColumnVisibilityModal({
               </div>
             ))}
           </div>
+
+          {onResetWidths && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => {
+                  onResetWidths();
+                }}
+                className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+              >
+                Reset Column Widths
+              </button>
+            </div>
+          )}
 
           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex gap-3">
             <button
