@@ -78,6 +78,11 @@ function ExpenseListSkeleton({ columnVisibility, columnWidths }: { columnVisibil
                   Payment Status
                 </th>
               )}
+              {columnVisibility.category && (
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Category
+                </th>
+              )}
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
@@ -113,6 +118,11 @@ function ExpenseListSkeleton({ columnVisibility, columnWidths }: { columnVisibil
                 )}
                 {columnVisibility.paymentStatus && (
                   <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap hidden lg:table-cell">
+                    <ShimmerLoader width="80px" height="16px" className="sm:h-5" />
+                  </td>
+                )}
+                {columnVisibility.category && (
+                  <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap">
                     <ShimmerLoader width="80px" height="16px" className="sm:h-5" />
                   </td>
                 )}
@@ -368,6 +378,12 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
                   <ColumnResizer onResize={(newWidth) => handleResize('paymentStatus', newWidth)} minWidth={80} />
                 </th>
               )}
+              {columnVisibility.category && (
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider relative" style={{ width: columnWidths.category, minWidth: columnWidths.category }}>
+                  Category
+                  <ColumnResizer onResize={(newWidth) => handleResize('category', newWidth)} minWidth={80} />
+                </th>
+              )}
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
@@ -489,6 +505,17 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
                         )}
                       </td>
                     )}
+                    {columnVisibility.category && (
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400" style={{ width: columnWidths.category, minWidth: columnWidths.category }}>
+                        {expense.category ? (
+                          <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300">
+                            {expense.category}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-500">—</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-right text-xs sm:text-sm font-medium">
                       <div className="flex justify-end gap-1 sm:gap-2">
                         <button
@@ -527,6 +554,7 @@ export default function ExpenseList({ expenses, allExpenses, currentMonth, onMon
                         (columnVisibility.paymentMode ? 1 : 0) +
                         (columnVisibility.forWhom ? 1 : 0) +
                         (columnVisibility.paymentStatus ? 1 : 0) +
+                        (columnVisibility.category ? 1 : 0) +
                         (!columnVisibility.date && isSplit ? 1 : 0) +
                         1 // Actions column
                       } className="px-2 sm:px-4 py-3">

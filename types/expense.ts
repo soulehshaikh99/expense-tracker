@@ -20,5 +20,6 @@ export interface Expense {
   paymentReceivedDate?: Date;
   isSplit?: boolean; // true if this is a split transaction
   splitDetails?: SplitDetail[]; // Array of split details when isSplit is true
+  category?: string; // Optional category for organizing transactions
 }
 

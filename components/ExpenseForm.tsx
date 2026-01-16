@@ -11,11 +11,12 @@ interface ExpenseFormProps {
   isOpen: boolean;
   onClose: () => void;
   forWhomSuggestions?: string[];
+  categorySuggestions?: string[];
 }
 
 const paymentModes: PaymentMode[] = ['Credit Card', 'Debit Card', 'UPI', 'Cash'];
 
-export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen, onClose, forWhomSuggestions = [] }: ExpenseFormProps) {
+export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen, onClose, forWhomSuggestions = [], categorySuggestions = [] }: ExpenseFormProps) {
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('Credit Card');
@@ -32,6 +33,9 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
   ]);
   const [splitSuggestions, setSplitSuggestions] = useState<Record<number, string[]>>({});
   const [splitHighlightedIndex, setSplitHighlightedIndex] = useState<Record<number, number>>({});
+  const [category, setCategory] = useState('');
+  const [showCategorySuggestions, setShowCategorySuggestions] = useState(false);
+  const [categoryHighlightedIndex, setCategoryHighlightedIndex] = useState(-1);
 
   const formatDateForInput = (date: Date) => {
     return new Date(date).toISOString().split('T')[0];
@@ -47,6 +51,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
       setTransactionType(editingExpense.transactionType || 'expense');
       setPaymentReceived(editingExpense.paymentReceived || false);
       setIsSplit(editingExpense.isSplit || false);
+      setCategory(editingExpense.category || '');
       if (editingExpense.isSplit && editingExpense.splitDetails) {
         setSplitDetails(editingExpense.splitDetails);
       } else {
@@ -87,6 +92,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
     setTransactionType('expense');
     setPaymentReceived(false);
     setIsSplit(false);
+    setCategory('');
     setSplitDetails([
       { person: 'Self', amount: 0, paymentReceived: false },
       { person: '', amount: 0, paymentReceived: false }
@@ -168,6 +174,7 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
         paymentReceived: s.paymentReceived || false,
         paymentReceivedDate: s.paymentReceived && s.paymentReceivedDate ? s.paymentReceivedDate : undefined
       })) : undefined,
+      category: category.trim() || undefined,
     };
 
     onSubmit(expenseData);
@@ -269,6 +276,67 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
     }
   };
 
+  // Filter category suggestions based on input
+  const filteredCategorySuggestions = (() => {
+    const input = category.trim().toLowerCase();
+    if (input === '') {
+      return categorySuggestions;
+    }
+    return categorySuggestions.filter(suggestion =>
+      suggestion.toLowerCase().includes(input) &&
+      suggestion.toLowerCase() !== input
+    );
+  })();
+
+  const handleCategoryChange = (value: string) => {
+    setCategory(value);
+    setShowCategorySuggestions(true);
+    setCategoryHighlightedIndex(-1);
+  };
+
+  const handleCategoryFocus = () => {
+    setShowCategorySuggestions(true);
+  };
+
+  const handleSelectCategorySuggestion = (suggestion: string) => {
+    setCategory(suggestion);
+    setShowCategorySuggestions(false);
+    setCategoryHighlightedIndex(-1);
+  };
+
+  const handleCategoryKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showCategorySuggestions || filteredCategorySuggestions.length === 0) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        return;
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setCategoryHighlightedIndex(prev =>
+          prev < filteredCategorySuggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setCategoryHighlightedIndex(prev => (prev > 0 ? prev - 1 : -1));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (categoryHighlightedIndex >= 0 && categoryHighlightedIndex < filteredCategorySuggestions.length) {
+          handleSelectCategorySuggestion(filteredCategorySuggestions[categoryHighlightedIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowCategorySuggestions(false);
+        setCategoryHighlightedIndex(-1);
+        break;
+    }
+  };
+
   // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -281,15 +349,19 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
         setSplitSuggestions({});
         setSplitHighlightedIndex({});
       }
+      if (!target.closest('.category-autocomplete')) {
+        setShowCategorySuggestions(false);
+        setCategoryHighlightedIndex(-1);
+      }
     };
 
-    if (showSuggestions || Object.keys(splitSuggestions).length > 0) {
+    if (showSuggestions || Object.keys(splitSuggestions).length > 0 || showCategorySuggestions) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }
-  }, [showSuggestions, splitSuggestions]);
+  }, [showSuggestions, splitSuggestions, showCategorySuggestions]);
 
   // Auto-calculate last person's amount when split is enabled
   useEffect(() => {
@@ -737,6 +809,42 @@ export default function ExpenseForm({ onSubmit, editingExpense, onCancel, isOpen
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
+        </div>
+
+        <div className="category-autocomplete relative">
+          <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Category
+          </label>
+          <input
+            type="text"
+            id="category"
+            value={category}
+            onChange={(e) => handleCategoryChange(e.target.value)}
+            onFocus={handleCategoryFocus}
+            onKeyDown={handleCategoryKeyDown}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="e.g., Food, Transport, Bills"
+            autoComplete="off"
+          />
+          {showCategorySuggestions && filteredCategorySuggestions.length > 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
+              {filteredCategorySuggestions.map((suggestion, index) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => handleSelectCategorySuggestion(suggestion)}
+                  className={`w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 focus:bg-blue-50 dark:focus:bg-blue-900/30 focus:outline-none transition-colors ${
+                    index === categoryHighlightedIndex ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-white dark:bg-gray-800'
+                  }`}
+                  onMouseEnter={() => setCategoryHighlightedIndex(index)}
+                >
+                  <span className="text-sm text-gray-900 dark:text-gray-100">
+                    {suggestion}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {((transactionType === 'expense' || transactionType === 'donation' || transactionType === 'lent') && forWhom !== 'Self' && forWhom.trim() !== '' && !isSplit) && (

@@ -10,12 +10,15 @@ interface ExpenseFiltersProps {
   selectedForWhom: string[] | 'All';
   selectedTransactionType: TransactionType[] | 'All';
   selectedPaymentStatus: 'All' | 'Received' | 'Pending';
+  selectedCategory: string[] | 'All';
   forWhomOptions: string[];
+  categoryOptions: string[];
   currentMonth: Date;
   onPaymentModeChange: (mode: PaymentMode[] | 'All') => void;
   onForWhomChange: (forWhom: string[] | 'All') => void;
   onTransactionTypeChange: (type: TransactionType[] | 'All') => void;
   onPaymentStatusChange: (status: 'All' | 'Received' | 'Pending') => void;
+  onCategoryChange: (category: string[] | 'All') => void;
   onMonthChange: (month: Date) => void;
   isOpen: boolean;
   onClose: () => void;
@@ -34,12 +37,15 @@ export default function ExpenseFilters({
   selectedForWhom,
   selectedTransactionType,
   selectedPaymentStatus,
+  selectedCategory,
   forWhomOptions,
+  categoryOptions,
   currentMonth,
   onPaymentModeChange,
   onForWhomChange,
   onTransactionTypeChange,
   onPaymentStatusChange,
+  onCategoryChange,
   onMonthChange,
   isOpen,
   onClose,
@@ -47,9 +53,11 @@ export default function ExpenseFilters({
   const [isTransactionTypeDropdownOpen, setIsTransactionTypeDropdownOpen] = useState(false);
   const [isPaymentModeDropdownOpen, setIsPaymentModeDropdownOpen] = useState(false);
   const [isForWhomDropdownOpen, setIsForWhomDropdownOpen] = useState(false);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const transactionTypeDropdownRef = useRef<HTMLDivElement>(null);
   const paymentModeDropdownRef = useRef<HTMLDivElement>(null);
   const forWhomDropdownRef = useRef<HTMLDivElement>(null);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
   const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const date = new Date(e.target.value);
@@ -77,6 +85,8 @@ export default function ExpenseFilters({
           setIsPaymentModeDropdownOpen(false);
         } else if (isForWhomDropdownOpen) {
           setIsForWhomDropdownOpen(false);
+        } else if (isCategoryDropdownOpen) {
+          setIsCategoryDropdownOpen(false);
         } else {
           onClose();
         }
@@ -92,7 +102,7 @@ export default function ExpenseFilters({
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose, isTransactionTypeDropdownOpen, isPaymentModeDropdownOpen, isForWhomDropdownOpen]);
+  }, [isOpen, onClose, isTransactionTypeDropdownOpen, isPaymentModeDropdownOpen, isForWhomDropdownOpen, isCategoryDropdownOpen]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -115,16 +125,22 @@ export default function ExpenseFilters({
       ) {
         setIsForWhomDropdownOpen(false);
       }
+      if (
+        categoryDropdownRef.current &&
+        !categoryDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsCategoryDropdownOpen(false);
+      }
     };
 
-    if (isTransactionTypeDropdownOpen || isPaymentModeDropdownOpen || isForWhomDropdownOpen) {
+    if (isTransactionTypeDropdownOpen || isPaymentModeDropdownOpen || isForWhomDropdownOpen || isCategoryDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isTransactionTypeDropdownOpen, isPaymentModeDropdownOpen, isForWhomDropdownOpen]);
+  }, [isTransactionTypeDropdownOpen, isPaymentModeDropdownOpen, isForWhomDropdownOpen, isCategoryDropdownOpen]);
 
   if (!isOpen) return null;
 
@@ -611,6 +627,150 @@ export default function ExpenseFilters({
                       </span>
                     );
                   })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Category
+          </label>
+          {selectedCategory === 'All' ? (
+            <select
+              id="category"
+              value="All"
+              onChange={(e) => {
+                if (e.target.value === 'All') {
+                  onCategoryChange('All');
+                } else {
+                  // Switch to multi-select mode with the selected category
+                  onCategoryChange([e.target.value]);
+                }
+              }}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="All">All</option>
+              {categoryOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="relative" ref={categoryDropdownRef}>
+              {/* Dropdown trigger button */}
+              <div
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 flex items-center justify-between cursor-pointer"
+                onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+              >
+                <span className="text-sm text-gray-500 dark:text-gray-400">Select categories...</span>
+                <ChevronDown
+                  size={16}
+                  className={`flex-shrink-0 text-gray-400 dark:text-gray-500 transition-transform ${isCategoryDropdownOpen ? 'transform rotate-180' : ''}`}
+                />
+              </div>
+              
+              {/* Dropdown menu */}
+              {isCategoryDropdownOpen && (
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  {/* Options list */}
+                  <div>
+                    <div
+                      className={`px-3 py-2 cursor-pointer flex items-center ${
+                        selectedCategory.length === categoryOptions.length
+                          ? 'bg-gray-50 dark:bg-gray-700'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                      onClick={() => {
+                        if (selectedCategory.length === categoryOptions.length) {
+                          // If all are selected, switch back to "All" mode
+                          onCategoryChange('All');
+                          setIsCategoryDropdownOpen(false);
+                        } else {
+                          // Select all categories
+                          onCategoryChange([...categoryOptions]);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center flex-1">
+                        {selectedCategory.length === categoryOptions.length && (
+                          <Check size={16} className="text-gray-600 dark:text-gray-400 mr-3" />
+                        )}
+                        {selectedCategory.length !== categoryOptions.length && (
+                          <div className="w-4 mr-3" />
+                        )}
+                        <span className="text-sm text-gray-900 dark:text-gray-100">All</span>
+                      </div>
+                    </div>
+                    {categoryOptions.map((option) => {
+                      const isSelected = selectedCategory.includes(option);
+                      return (
+                        <div
+                          key={option}
+                          className={`px-3 py-2 cursor-pointer flex items-center ${
+                            isSelected
+                              ? 'bg-gray-50 dark:bg-gray-700'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                          }`}
+                          onClick={() => {
+                            if (isSelected) {
+                              // Remove from selection
+                              const newSelection = selectedCategory.filter(c => c !== option);
+                              // If no categories selected, switch back to "All"
+                              onCategoryChange(newSelection.length > 0 ? newSelection : 'All');
+                            } else {
+                              // Add to selection
+                              onCategoryChange([...selectedCategory, option]);
+                            }
+                          }}
+                        >
+                          <div className="flex items-center flex-1">
+                            {isSelected && (
+                              <Check size={16} className="text-gray-600 dark:text-gray-400 mr-3" />
+                            )}
+                            {!isSelected && (
+                              <div className="w-4 mr-3" />
+                            )}
+                            <span className={`text-sm ${
+                              isSelected
+                                ? 'text-gray-900 dark:text-gray-100 font-medium'
+                                : 'text-gray-900 dark:text-gray-100'
+                            }`}>
+                              {option}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Selected tags display area */}
+              {selectedCategory.length > 0 && (
+                <div className="mt-2 w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md flex flex-wrap items-center gap-2 min-h-[42px]">
+                  {selectedCategory.map((option) => (
+                    <span
+                      key={option}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 whitespace-nowrap"
+                    >
+                      {option}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newSelection = selectedCategory.filter(c => c !== option);
+                          onCategoryChange(newSelection.length > 0 ? newSelection : 'All');
+                        }}
+                        className="ml-0.5 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-full p-0.5 transition-colors"
+                        aria-label={`Remove ${option}`}
+                      >
+                        <X size={12} className="text-gray-600 dark:text-gray-400" />
+                      </button>
+                    </span>
+                  ))}
                 </div>
               )}
             </div>

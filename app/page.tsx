@@ -26,6 +26,7 @@ export default function Home() {
   const [selectedForWhom, setSelectedForWhom] = useState<string[] | 'All'>('All');
   const [selectedTransactionType, setSelectedTransactionType] = useState<TransactionType[] | 'All'>('All');
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<'All' | 'Received' | 'Pending'>('All');
+  const [selectedCategory, setSelectedCategory] = useState<string[] | 'All'>('All');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -43,7 +44,7 @@ export default function Home() {
   useEffect(() => {
     applyFilters();
     updateCurrentBudget();
-  }, [expenses, selectedPaymentMode, selectedForWhom, selectedTransactionType, selectedPaymentStatus, currentMonth, budgets]);
+  }, [expenses, selectedPaymentMode, selectedForWhom, selectedTransactionType, selectedPaymentStatus, selectedCategory, currentMonth, budgets]);
 
   const fetchExpenses = async () => {
     try {
@@ -70,6 +71,7 @@ export default function Home() {
             paymentReceived: sd.paymentReceived || false,
             paymentReceivedDate: sd.paymentReceivedDate ? sd.paymentReceivedDate.toDate() : undefined,
           })) : undefined,
+          category: data.category || undefined,
         });
       });
       setExpenses(expensesData);
@@ -152,6 +154,15 @@ export default function Home() {
       });
     }
 
+    // Filter by category
+    if (selectedCategory !== 'All') {
+      filtered = filtered.filter((expense) => {
+        const expenseCategory = expense.category || '';
+        // Only include if the expense has a category and it's in the selected list
+        return expenseCategory !== '' && selectedCategory.includes(expenseCategory);
+      });
+    }
+
     setFilteredExpenses(filtered);
   };
 
@@ -168,6 +179,7 @@ export default function Home() {
         paymentReceivedDate: expenseData.paymentReceivedDate
           ? Timestamp.fromDate(expenseData.paymentReceivedDate)
           : null,
+        category: expenseData.category || null,
       };
 
       // Add split transaction data if present
@@ -229,6 +241,7 @@ export default function Home() {
         paymentReceivedDate: expenseData.paymentReceivedDate
           ? Timestamp.fromDate(expenseData.paymentReceivedDate)
           : null,
+        category: expenseData.category || null,
       };
 
       // Add split transaction data if present
@@ -296,6 +309,7 @@ export default function Home() {
     setSelectedForWhom('All');
     setSelectedTransactionType('All');
     setSelectedPaymentStatus('All');
+    setSelectedCategory('All');
     setCurrentMonth(new Date());
     setIsFilterModalOpen(false);
   };
@@ -305,6 +319,7 @@ export default function Home() {
                           selectedForWhom !== 'All' ||
                           selectedTransactionType !== 'All' ||
                           selectedPaymentStatus !== 'All' ||
+                          selectedCategory !== 'All' ||
                           (currentMonth.getMonth() !== new Date().getMonth() || 
                            currentMonth.getFullYear() !== new Date().getFullYear());
 
@@ -353,6 +368,13 @@ export default function Home() {
 
   const getUniqueForWhomValues = () => {
     const values = expenses.map((e) => e.forWhom);
+    return Array.from(new Set(values)).sort();
+  };
+
+  const getUniqueCategories = () => {
+    const values = expenses
+      .map((e) => e.category)
+      .filter((cat): cat is string => !!cat && cat.trim() !== '');
     return Array.from(new Set(values)).sort();
   };
 
@@ -549,6 +571,7 @@ export default function Home() {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           forWhomSuggestions={getUniqueForWhomValues()}
+          categorySuggestions={getUniqueCategories()}
         />
 
         <ExpenseFilters
@@ -556,12 +579,15 @@ export default function Home() {
           selectedForWhom={selectedForWhom}
           selectedTransactionType={selectedTransactionType}
           selectedPaymentStatus={selectedPaymentStatus}
+          selectedCategory={selectedCategory}
           forWhomOptions={getUniqueForWhomValues()}
+          categoryOptions={getUniqueCategories()}
           currentMonth={currentMonth}
           onPaymentModeChange={setSelectedPaymentMode}
           onForWhomChange={setSelectedForWhom}
           onTransactionTypeChange={setSelectedTransactionType}
           onPaymentStatusChange={setSelectedPaymentStatus}
+          onCategoryChange={setSelectedCategory}
           onMonthChange={setCurrentMonth}
           isOpen={isFilterModalOpen}
           onClose={handleCloseFilterModal}

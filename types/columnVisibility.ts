@@ -1,4 +1,4 @@
-export type ColumnId = 'date' | 'title' | 'amount' | 'paymentMode' | 'forWhom' | 'paymentStatus';
+export type ColumnId = 'date' | 'title' | 'amount' | 'paymentMode' | 'forWhom' | 'paymentStatus' | 'category';
 
 export type ColumnVisibility = Record<ColumnId, boolean>;
 
@@ -14,6 +14,7 @@ export const DEFAULT_COLUMN_VISIBILITY: ColumnVisibility = {
   paymentMode: true,
   forWhom: true,
   paymentStatus: true,
+  category: true,
 };
 
 export const COLUMN_LABELS: Record<ColumnId, string> = {
@@ -23,6 +24,7 @@ export const COLUMN_LABELS: Record<ColumnId, string> = {
   paymentMode: 'Payment Mode',
   forWhom: 'For/From Whom',
   paymentStatus: 'Payment Status',
+  category: 'Category',
 };
 
 export function loadColumnVisibility(): ColumnVisibility {
@@ -63,6 +65,7 @@ export const DEFAULT_COLUMN_WIDTHS: ColumnWidths = {
   paymentMode: 140,
   forWhom: 180,
   paymentStatus: 150,
+  category: 150,
 };
 
 export function loadColumnWidths(): ColumnWidths {
