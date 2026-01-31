@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, addDoc, updateDoc, deleteDoc, doc, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -12,6 +12,8 @@ import ExpenseFilters from '@/components/ExpenseFilters';
 import MonthlySummary from '@/components/MonthlySummary';
 import BudgetForm from '@/components/BudgetForm';
 import ThemeToggle from '@/components/ThemeToggle';
+import OfflineBanner from '@/components/OfflineBanner';
+import { useOnlineStatus } from '@/lib/useOnlineStatus';
 // import FirebaseStatus from '@/components/FirebaseStatus';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
@@ -36,10 +38,22 @@ export default function Home() {
   const [isLoadingExpenses, setIsLoadingExpenses] = useState(true);
   const [isLoadingBudgets, setIsLoadingBudgets] = useState(true);
 
+  const isOnline = useOnlineStatus();
+  const wasOfflineRef = useRef(false);
+
   useEffect(() => {
     fetchExpenses();
     fetchBudgets();
   }, []);
+
+  // Auto-refresh expenses and budgets when coming back online
+  useEffect(() => {
+    if (wasOfflineRef.current && isOnline) {
+      fetchExpenses();
+      fetchBudgets();
+    }
+    wasOfflineRef.current = !isOnline;
+  }, [isOnline]);
 
   useEffect(() => {
     applyFilters();
@@ -507,8 +521,10 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-8 px-2 sm:px-4 lg:px-8">
-      <div className="max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <OfflineBanner />
+      <div className="py-4 sm:py-8 px-2 sm:px-4 lg:px-8">
+        <div className="max-w-[1600px] mx-auto">
         <div className="mb-4 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
             <div className="text-center sm:text-left flex-1">
@@ -602,6 +618,7 @@ export default function Home() {
           isOpen={isBudgetModalOpen}
           onClose={handleCloseBudgetModal}
         />
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -41,6 +41,17 @@ try {
   }
   // Re-throw to prevent app from running with invalid config
   throw error;
+}
+
+// Enable offline persistence (client-only). Cached data is available when offline.
+if (typeof window !== 'undefined') {
+  enableIndexedDbPersistence(db).catch((err: { code?: string }) => {
+    if (err?.code === 'failed-precondition') {
+      console.warn('Firestore persistence: multiple tabs open, persistence disabled in this tab.');
+    } else {
+      console.error('Firestore persistence error:', err);
+    }
+  });
 }
 
 export { db };
