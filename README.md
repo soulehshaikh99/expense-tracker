@@ -82,7 +82,7 @@ Each expense contains:
 ### Monthly Summary
 - Total spent by you this month
 - Amount spent for others (with received/pending breakdown)
-- Net amount (your expenses + pending from others)
+- Net amount (your expenses + donations + pending from others + pending lent - income)
 - Breakdown by payment mode
 - Quick stats
 

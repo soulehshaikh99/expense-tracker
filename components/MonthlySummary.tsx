@@ -233,8 +233,20 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
     }
   };
 
-  // Net amount = expenses + pending + lent pending - income (income reduces net spending)
-  const netAmount = totalSpentByMe + totalPending + pendingLent - totalIncome;
+  // Donations count as spending: self donations + pending (unreimbursed) donations for others
+  const totalSelfDonations = donationTransactions
+    .filter((e) => e.forWhom === 'Self')
+    .reduce((sum, e) => sum + e.amount, 0);
+  const totalPendingDonations = pendingDonations.reduce((sum, e) => sum + e.amount, 0);
+
+  // Net amount = expenses + donations + pending + lent pending - income
+  const netAmount =
+    totalSpentByMe +
+    totalSelfDonations +
+    totalPendingDonations +
+    totalPending +
+    pendingLent -
+    totalIncome;
 
   // Budget calculations
   const budgetAmount = budget?.amount || null;
@@ -380,7 +392,7 @@ export default function MonthlySummary({ expenses, currentMonth, onMonthChange, 
         )}
 
         <div className="p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Net Amount (Me + Pending + Lent Pending - Income)</div>
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Net Amount (Me + Donations + Pending + Lent Pending - Income)</div>
           <div className="text-xl sm:text-2xl font-bold text-green-900 dark:text-green-300">₹{formatNumber(netAmount)}</div>
         </div>
 
